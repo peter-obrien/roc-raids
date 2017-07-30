@@ -1,6 +1,8 @@
 import discord
 import asyncio
 import sys
+from datetime import datetime
+from datetime import timedelta
 
 class RaidMap:
     def __init__(self):
@@ -80,39 +82,66 @@ async def on_ready():
 async def on_message(message):
 
     if message.channel.name != 'general':
-        if message.content.startswith('!how'):
-            output = 'Valid commands:\n' + '\n\t!start <raid-name>' + '\n\t!join <raid-name>' + '\n\t!who <raid-name>' + '\n\t!raids'
-            await client.send_message(message.channel, output)
+        if message.channel.name == 'gymhuntr':
+            if message.content.startswith('!go'):
+                msg = await client.get_message(message.channel, '341229947811135488')
+                # print(msg.embeds[0])
+                gmapUrl = 'https://www.google.com/maps/dir/Current+Location/' + msg.embeds[0]['url'].split('#')[1]
+                descTokens = msg.embeds[0]['description'].split('\n')
+                gymName = descTokens[0]
+                pokemon = descTokens[1]
+                # todo: use ending and the message timestamp to determine the fixed end time
+                # ending = descTokens[3]
+                timeTokens = descTokens[3].split(' ')
+                msgTime = msg.timestamp
+                secondsToEnd = int(timeTokens[6]) + (60 * int(timeTokens[4])) + (60 * 60 * int(timeTokens[2]))
+                # print(timeTokens)
+                # print(msgTime.strftime('%m/%d %I:%M %p'))
+                # print(message.timestamp.strftime('%m/%d %I:%M %p'))
+                # print(secondsToEnd)
+                endTime = msgTime + timedelta(seconds=secondsToEnd)
+                desc = gymName + '\n' + 'Ends: ' + endTime.strftime('%m/%d %I:%M %p')
+                result = discord.Embed(title=pokemon + ': Raid ' + '<raid-id>', url=gmapUrl, description=desc, colour=0x408fd0)
+                thumbnailContent = msg.embeds[0]['thumbnail']
+                result.set_thumbnail(url=thumbnailContent['url'])
+                result.thumbnail.height=thumbnailContent['height']
+                result.thumbnail.width=thumbnailContent['width']
+                result.thumbnail.proxy_url=thumbnailContent['proxy_url']
+                await client.send_message(message.channel, embed=result)
+        else:
+            if message.content.startswith('!how'):
+                output = 'Valid commands:\n' + '\n\t!start <raid-details>' + '\n\t!join <raid-id>' + '\n\t!who <raid-id>' + '\n\t!details <raid-id>'
+                await client.send_message(message.channel, output)
 
-        elif message.content.startswith('!start '):
-            raidDetails = message.content[7:]
-            raidId = raids.start_raid(raidDetails)
-            raids.add_raider(raidId, message.author.display_name)
-            em = raids.get_detail_embed(raidId)
-            await client.send_message(message.channel, embed=em)
-            await client.delete_message(message)
+            elif message.content.startswith('!start '):
+                raidDetails = message.content[7:]
+                raidId = raids.start_raid(raidDetails)
+                raids.add_raider(raidId, message.author.display_name)
+                em = raids.get_detail_embed(raidId)
+                await client.send_message(message.channel, embed=em)
+                await client.delete_message(message)
 
-        elif message.content.startswith('!who '):
-            raidId = message.content[5:]
-            em = raids.get_raiders_embed(raidId)
-            await client.send_message(message.channel, embed=em)
+            elif message.content.startswith('!who '):
+                raidId = message.content[5:]
+                em = raids.get_raiders_embed(raidId)
+                await client.send_message(message.channel, embed=em)
 
-        elif message.content.startswith('!join '):
-            raidId = message.content[6:]
-            raids.add_raider(raidId, message.author.display_name)
-            em = raids.get_detail_embed(raidId)
-            await client.send_message(message.channel, embed=em)
+            elif message.content.startswith('!join '):
+                raidId = message.content[6:]
+                raids.add_raider(raidId, message.author.display_name)
+                em = raids.get_detail_embed(raidId)
+                await client.send_message(message.channel, embed=em)
 
-        elif message.content.startswith('!leave '):
-            raidId = message.content[7:]
-            await client.send_message(message.channel, 'Not yet implemented')
+            elif message.content.startswith('!leave '):
+                raidId = message.content[7:]
+                await client.send_message(message.channel, 'Not yet implemented')
 
-        elif message.content.startswith('!details '):
-            raidId = message.content[9:]
-            em = raids.get_detail_embed(raidId)
-            await client.send_message(message.channel, embed=em)
+            elif message.content.startswith('!details '):
+                raidId = message.content[9:]
+                em = raids.get_detail_embed(raidId)
+                await client.send_message(message.channel, embed=em)
 
-        elif message.content.startswith('!raids'):
-            await client.send_message(message.channel, raids.get_raids())
+            elif message.content.startswith('!raids'):
+                await client.send_message(message.channel, raids.get_raids())
 
 client.run(sys.argv[1])
