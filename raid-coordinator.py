@@ -43,7 +43,7 @@ class RaidMap:
         return self.raiders[raidId]
 
     def get_details(self, raidId):
-        return self.details[raidId]
+        return self.raidMessages[raidId][1]
 
     def get_detail_embed(self, raidId):
         result = discord.Embed(title='Raid ' + str(raidId), description=self.details[str(raidId)], colour=embedColor)
@@ -64,14 +64,6 @@ class RaidMap:
                 counter = 0
         result = discord.Embed(title='Raid ' + str(raidId), description=self.details[str(raidId)] + '\n' + raiderOutput, colour=embedColor)
         result.set_footer(text='Participants: ' + str(len(self.raiders[raidId])))
-        return result
-
-    def get_raids(self):
-        raidList = sorted(self.raids)
-        result = ''
-        for raid in raidList:
-            result += raid + '\n'
-        result.rstrip()
         return result
 
     def clear_raids(self):
@@ -133,6 +125,8 @@ async def on_message(message):
 
                 raidMessage = await client.send_message(message.channel, embed=result)
                 raids.store_raid(raidId, raidMessage, result)
+                if message.id != '341294312749006849':
+                    await client.delete_message(message)
         else:
             if message.content.startswith('!how'):
                 output = 'Valid commands:\n' + '\n\t!start <raid-details>' + '\n\t!join <raid-id>' + '\n\t!who <raid-id>' + '\n\t!details <raid-id>'
@@ -149,7 +143,7 @@ async def on_message(message):
             elif message.content.startswith('!who '):
                 raidId = message.content[5:]
                 em = raids.get_raiders_embed(raidId)
-                await client.send_message(message.channel, embed=em)
+                await client.send_message(message.author, embed=em)
 
             elif message.content.startswith('!join '):
                 raidId = message.content[6:]
@@ -162,10 +156,12 @@ async def on_message(message):
 
             elif message.content.startswith('!details '):
                 raidId = message.content[9:]
-                em = raids.get_detail_embed(raidId)
-                await client.send_message(message.channel, embed=em)
+                em = raids.get_details(raidId)
+                await client.send_message(message.author, embed=em)
 
-            elif message.content.startswith('!raids'):
-                await client.send_message(message.channel, raids.get_raids())
+            elif message.content.startswith('!raid '):
+                raidId = message.content[6:]
+                em = raids.get_details(raidId)
+                await client.send_message(message.author, embed=em)
 
 client.run(sys.argv[1])
