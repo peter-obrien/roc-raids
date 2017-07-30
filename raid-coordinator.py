@@ -74,6 +74,7 @@ raids = RaidMap()
 easternTz = timezone('US/Eastern')
 utcTz= timezone('UTC')
 timeFmt = '%m/%d %I:%M %p'
+googleDirectionsUrlBase='https://www.google.com/maps/dir/Current+Location/'
 
 @client.event
 async def on_ready():
@@ -90,16 +91,16 @@ async def on_message(message):
             if message.content.startswith('!go'):
                 msg = await client.get_message(message.channel, '341229947811135488')
 
-                gmapUrl = 'https://www.google.com/maps/dir/Current+Location/' + msg.embeds[0]['url'].split('#')[1]
+                gmapUrl = googleDirectionsUrlBase + msg.embeds[0]['url'].split('#')[1]
 
                 descTokens = msg.embeds[0]['description'].split('\n')
                 gymName = descTokens[0]
                 pokemon = descTokens[1]
 
                 timeTokens = descTokens[3].split(' ')
-                msgTime = msg.timestamp.replace(tzinfo=utcTz).astimezone(easternTz)
                 secondsToEnd = int(timeTokens[6]) + (60 * int(timeTokens[4])) + (60 * 60 * int(timeTokens[2]))
-                endTime = msgTime + timedelta(seconds=secondsToEnd)
+                endTime = msg.timestamp + timedelta(seconds=secondsToEnd)
+                easternEndTime = endTime.replace(tzinfo=utcTz).astimezone(easternTz)
 
                 desc = gymName + '\n' + 'Ends: ' + endTime.strftime(timeFmt)
                 result = discord.Embed(title=pokemon + ': Raid ' + '<raid-id>', url=gmapUrl, description=desc, colour=0x408fd0)
