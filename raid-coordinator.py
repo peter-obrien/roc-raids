@@ -10,8 +10,24 @@ class RaidMap:
         self.raids = set()
         self.raiders = dict()
         self.details = dict()
+        self.raidMessages = dict()
         self.raidIdSeed = 0
 
+    def generate_raid_id(self):
+        self.raidIdSeed += 1
+        return self.raidIdSeed
+
+    def store_raid(self, raidId, raidMessage, raidMessageEmbed):
+        self.raidMessages[str(raidId)] = (raidMessage, raidMessageEmbed)
+        self.raiders[str(raidId)] = []
+
+    def add_raider_gh(self, raidId, raiderName):
+        self.raiders[raidId].append(raiderName)
+        raidMessageEmbed = self.raidMessages[raidId][1]
+        raidMessageEmbed.set_footer(text='Participants: ' + str(len(self.raiders[raidId])))
+        return (self.raidMessages[raidId][0], raidMessageEmbed)
+
+    #start_raid will be used when gymhuntr integration is down
     def start_raid(self, raidDetails):
         raidId = self.raidIdSeed + 1
         self.raidIdSeed += 1
@@ -30,7 +46,7 @@ class RaidMap:
         return self.details[raidId]
 
     def get_detail_embed(self, raidId):
-        result = discord.Embed(title='Raid ' + str(raidId), description=self.details[str(raidId)], colour=0x408fd0)
+        result = discord.Embed(title='Raid ' + str(raidId), description=self.details[str(raidId)], colour=embedColor)
         result.set_footer(text='Participants: ' + str(len(self.raiders[raidId])))
         return result
 
@@ -46,7 +62,7 @@ class RaidMap:
             if counter == 3:
                 raiderOutput += '\n'
                 counter = 0
-        result = discord.Embed(title='Raid ' + str(raidId), description=self.details[str(raidId)] + '\n' + raiderOutput, colour=0x408fd0)
+        result = discord.Embed(title='Raid ' + str(raidId), description=self.details[str(raidId)] + '\n' + raiderOutput, colour=embedColor)
         result.set_footer(text='Participants: ' + str(len(self.raiders[raidId])))
         return result
 
@@ -72,9 +88,10 @@ if len(sys.argv) < 2:
 client = discord.Client()
 raids = RaidMap()
 easternTz = timezone('US/Eastern')
-utcTz= timezone('UTC')
+utcTz = timezone('UTC')
 timeFmt = '%m/%d %I:%M %p'
 googleDirectionsUrlBase='https://www.google.com/maps/dir/Current+Location/'
+embedColor = 0x408fd0
 
 @client.event
 async def on_ready():
@@ -87,10 +104,10 @@ async def on_ready():
 async def on_message(message):
 
     if message.channel.name != 'general':
-        if message.author.name == 'GymHuntrBot':
-            # if message.content.startswith('!go'):
-            # msg = await client.get_message(message.channel, '341229947811135488')
+        if message.content.startswith('!go'):
+            message = await client.get_message(message.channel, '341294312749006849')
 
+        if message.author.name == 'GymHuntrBot':
             if len(message.embeds) > 0:
                 gmapUrl = googleDirectionsUrlBase + message.embeds[0]['url'].split('#')[1]
 
@@ -103,14 +120,19 @@ async def on_message(message):
                 endTime = message.timestamp + timedelta(seconds=secondsToEnd)
                 easternEndTime = endTime.replace(tzinfo=utcTz).astimezone(easternTz)
 
-                desc = gymName + '\n' + 'Ends: ' + easternEndTime.strftime(timeFmt)
-                result = discord.Embed(title=pokemon + ': Raid ' + '<raid-id>', url=gmapUrl, description=desc, colour=0x408fd0)
+                desc = gymName + '\n' + '*Ends: ' + easternEndTime.strftime(timeFmt) + '*'
+
+                raidId = raids.generate_raid_id()
+                result = discord.Embed(title=pokemon + ': Raid #' + str(raidId), url=gmapUrl, description=desc, colour=embedColor)
+
                 thumbnailContent = message.embeds[0]['thumbnail']
                 result.set_thumbnail(url=thumbnailContent['url'])
                 result.thumbnail.height=thumbnailContent['height']
                 result.thumbnail.width=thumbnailContent['width']
                 result.thumbnail.proxy_url=thumbnailContent['proxy_url']
-                await client.send_message(message.channel, embed=result)
+
+                raidMessage = await client.send_message(message.channel, embed=result)
+                raids.store_raid(raidId, raidMessage, result)
         else:
             if message.content.startswith('!how'):
                 output = 'Valid commands:\n' + '\n\t!start <raid-details>' + '\n\t!join <raid-id>' + '\n\t!who <raid-id>' + '\n\t!details <raid-id>'
@@ -131,9 +153,8 @@ async def on_message(message):
 
             elif message.content.startswith('!join '):
                 raidId = message.content[6:]
-                raids.add_raider(raidId, message.author.display_name)
-                em = raids.get_detail_embed(raidId)
-                await client.send_message(message.channel, embed=em)
+                msgData = raids.add_raider_gh(raidId, message.author.display_name)
+                await client.edit_message(msgData[0], embed=msgData[1])
 
             elif message.content.startswith('!leave '):
                 raidId = message.content[7:]
