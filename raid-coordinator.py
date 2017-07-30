@@ -1,8 +1,9 @@
 import discord
 import asyncio
 import sys
-from datetime import datetime
-from datetime import timedelta
+from datetime import datetime, timedelta
+from pytz import timezone
+import pytz
 
 class RaidMap:
     def __init__(self):
@@ -70,6 +71,9 @@ if len(sys.argv) < 2:
 
 client = discord.Client()
 raids = RaidMap()
+easternTz = timezone('US/Eastern')
+utcTz= timezone('UTC')
+timeFmt = '%m/%d %I:%M %p'
 
 @client.event
 async def on_ready():
@@ -93,14 +97,10 @@ async def on_message(message):
                 # todo: use ending and the message timestamp to determine the fixed end time
                 # ending = descTokens[3]
                 timeTokens = descTokens[3].split(' ')
-                msgTime = msg.timestamp
+                msgTime = msg.timestamp.replace(tzinfo=utcTz).astimezone(easternTz)
                 secondsToEnd = int(timeTokens[6]) + (60 * int(timeTokens[4])) + (60 * 60 * int(timeTokens[2]))
-                # print(timeTokens)
-                # print(msgTime.strftime('%m/%d %I:%M %p'))
-                # print(message.timestamp.strftime('%m/%d %I:%M %p'))
-                # print(secondsToEnd)
                 endTime = msgTime + timedelta(seconds=secondsToEnd)
-                desc = gymName + '\n' + 'Ends: ' + endTime.strftime('%m/%d %I:%M %p')
+                desc = gymName + '\n' + 'Ends: ' + endTime.strftime(timeFmt)
                 result = discord.Embed(title=pokemon + ': Raid ' + '<raid-id>', url=gmapUrl, description=desc, colour=0x408fd0)
                 thumbnailContent = msg.embeds[0]['thumbnail']
                 result.set_thumbnail(url=thumbnailContent['url'])
