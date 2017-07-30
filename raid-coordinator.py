@@ -102,7 +102,7 @@ async def on_message(message):
                 endTime = msg.timestamp + timedelta(seconds=secondsToEnd)
                 easternEndTime = endTime.replace(tzinfo=utcTz).astimezone(easternTz)
 
-                desc = gymName + '\n' + 'Ends: ' + endTime.strftime(timeFmt)
+                desc = gymName + '\n' + 'Ends: ' + easternEndTime.strftime(timeFmt)
                 result = discord.Embed(title=pokemon + ': Raid ' + '<raid-id>', url=gmapUrl, description=desc, colour=0x408fd0)
                 thumbnailContent = msg.embeds[0]['thumbnail']
                 result.set_thumbnail(url=thumbnailContent['url'])
