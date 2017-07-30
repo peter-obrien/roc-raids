@@ -87,24 +87,25 @@ async def on_ready():
 async def on_message(message):
 
     if message.channel.name != 'general':
-        if message.channel.name == 'gymhuntr':
-            if message.content.startswith('!go'):
-                msg = await client.get_message(message.channel, '341229947811135488')
+        if message.author.name == 'GymHuntrBot':
+            # if message.content.startswith('!go'):
+            # msg = await client.get_message(message.channel, '341229947811135488')
 
-                gmapUrl = googleDirectionsUrlBase + msg.embeds[0]['url'].split('#')[1]
+            if len(message.embeds) > 0:
+                gmapUrl = googleDirectionsUrlBase + message.embeds[0]['url'].split('#')[1]
 
-                descTokens = msg.embeds[0]['description'].split('\n')
+                descTokens = message.embeds[0]['description'].split('\n')
                 gymName = descTokens[0]
                 pokemon = descTokens[1]
 
                 timeTokens = descTokens[3].split(' ')
                 secondsToEnd = int(timeTokens[6]) + (60 * int(timeTokens[4])) + (60 * 60 * int(timeTokens[2]))
-                endTime = msg.timestamp + timedelta(seconds=secondsToEnd)
+                endTime = message.timestamp + timedelta(seconds=secondsToEnd)
                 easternEndTime = endTime.replace(tzinfo=utcTz).astimezone(easternTz)
 
                 desc = gymName + '\n' + 'Ends: ' + easternEndTime.strftime(timeFmt)
                 result = discord.Embed(title=pokemon + ': Raid ' + '<raid-id>', url=gmapUrl, description=desc, colour=0x408fd0)
-                thumbnailContent = msg.embeds[0]['thumbnail']
+                thumbnailContent = message.embeds[0]['thumbnail']
                 result.set_thumbnail(url=thumbnailContent['url'])
                 result.thumbnail.height=thumbnailContent['height']
                 result.thumbnail.width=thumbnailContent['width']
