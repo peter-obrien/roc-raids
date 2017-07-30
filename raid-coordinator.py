@@ -19,10 +19,16 @@ class RaidMap:
 
     def store_raid(self, raidId, raidMessage, raidMessageEmbed):
         self.raidMessages[str(raidId)] = (raidMessage, raidMessageEmbed)
-        self.raiders[str(raidId)] = []
+        self.raiders[str(raidId)] = set()
 
     def add_raider_gh(self, raidId, raiderName):
-        self.raiders[raidId].append(raiderName)
+        self.raiders[raidId].add(raiderName)
+        raidMessageEmbed = self.raidMessages[raidId][1]
+        raidMessageEmbed.set_footer(text='Participants: ' + str(len(self.raiders[raidId])))
+        return (self.raidMessages[raidId][0], raidMessageEmbed)
+
+    def remove_raider_gh(self, raidId, raiderName):
+        self.raiders[raidId].discard(raiderName)
         raidMessageEmbed = self.raidMessages[raidId][1]
         raidMessageEmbed.set_footer(text='Participants: ' + str(len(self.raiders[raidId])))
         return (self.raidMessages[raidId][0], raidMessageEmbed)
@@ -32,12 +38,12 @@ class RaidMap:
         raidId = self.raidIdSeed + 1
         self.raidIdSeed += 1
         self.raids.add(str(raidId))
-        self.raiders[str(raidId)] = []
+        self.raiders[str(raidId)] = set()
         self.details[str(raidId)] = raidDetails
         return str(raidId)
 
     def add_raider(self, raidId, raiderName):
-        self.raiders[raidId].append(raiderName)
+        self.raiders[raidId].add(raiderName)
 
     def get_raiders(self, raidId):
         return self.raiders[raidId]
@@ -152,7 +158,8 @@ async def on_message(message):
 
             elif message.content.startswith('!leave '):
                 raidId = message.content[7:]
-                await client.send_message(message.channel, 'Not yet implemented')
+                msgData = raids.remove_raider_gh(raidId, message.author.display_name)
+                await client.edit_message(msgData[0], embed=msgData[1])
 
             elif message.content.startswith('!details '):
                 raidId = message.content[9:]
