@@ -21,17 +21,33 @@ class RaidMap:
         self.raidMessages[str(raidId)] = (raidMessage, raidMessageEmbed)
         self.raiders[str(raidId)] = set()
 
-    def add_raider_gh(self, raidId, raiderName):
-        self.raiders[raidId].add(raiderName)
+    def add_raider_gh(self, raidId, raiderName, party_size=1, start_time=None):
+        raider = Participant(raiderName, int(party_size), start_time)
+        participants = self.raiders[raidId]
+        if raider in participants:
+            participants.remove(raider)
+        participants.add(raider)
         raidMessageEmbed = self.raidMessages[raidId][1]
-        raidMessageEmbed.set_footer(text='Participants: ' + str(len(self.raiders[raidId])))
+        raidMessageEmbed.set_footer(text='Participants: ' + str(self.get_participant_number(raidId)))
         return (self.raidMessages[raidId][0], raidMessageEmbed)
 
     def remove_raider_gh(self, raidId, raiderName):
-        self.raiders[raidId].discard(raiderName)
+        self.raiders[raidId].discard(Participant(raiderName))
         raidMessageEmbed = self.raidMessages[raidId][1]
-        raidMessageEmbed.set_footer(text='Participants: ' + str(len(self.raiders[raidId])))
+        raidMessageEmbed.set_footer(text='Participants: ' + str(self.get_participant_number(raidId)))
         return (self.raidMessages[raidId][0], raidMessageEmbed)
+
+    def get_participant_number(self, raidId):
+        result = 0
+        for raider in self.raiders[raidId]:
+            result += raider.party_size
+        return result
+
+    def get_raiders_gh(self, raidId):
+        result = 'Here are the ' + str(self.get_participant_number(raidId)) + ' participants for raid #' + str(raidId) + ':'
+        for raider in self.raiders[raidId]:
+            result += '\n\t' + str(raider)
+        return result
 
     #start_raid will be used when gymhuntr integration is down
     def start_raid(self, raidDetails):
@@ -77,6 +93,29 @@ class RaidMap:
         self.raiders.clear()
 #
 # End RaidMap class
+#
+
+class Participant:
+    def __init__(self, username, party_size=1, start_time=None):
+        self.username = username
+        self.party_size = party_size
+        self.start_time = start_time
+
+    def __eq__(self, other):
+        return self.username == other.username
+
+    def __hash__(self):
+        return hash(self.username)
+
+    def __str__(self):
+        result = self.username
+        if self.party_size > 1:
+            result += ' +' + str(self.party_size-1)
+        if self.start_time is not None:
+            result += ' at ' + self.start_time
+        return result
+#
+# End Participant class
 #
 
 if len(sys.argv) < 2:
@@ -134,9 +173,9 @@ async def on_message(message):
                 if message.id != '341294312749006849':
                     await client.delete_message(message)
         else:
-            if message.content.startswith('!how') or message.content.startswith('!roc-raids'):
+            if message.content.startswith('!rocraids') or message.content.startswith('!roc-raids'):
                 em=discord.Embed(title="Commands", description="Here are the commands that the roc-raids bot recognizes.", color=0xf0040b)
-                em.add_field(name="!join [raid-id] (extra-people) (start-time)", value="Use this command to signal to others that you wish to attend the raid. The message with the specified raid-id will be updated to reflect your party's size.", inline=False)
+                em.add_field(name="!join [raid-id] (party-size) (start-time)", value="Use this command to signal to others that you wish to attend the raid. The message with the specified raid-id will be updated to reflect your party's size. Can be used again to overwrite your previous party for raid.", inline=False)
                 em.add_field(name="!leave [raid-id]", value="Can't make the raid you intended to join? Use this to take your party off the list.", inline=False)
                 em.add_field(name="!raid [raid-id]", value="Receive a PM from the bot with the raid summary. Can also use !details [raid-id]", inline=False)
                 em.add_field(name="!who [raid-id]", value="Receive a PM from the bot with the details of those that used the !join command.", inline=False)
@@ -152,12 +191,19 @@ async def on_message(message):
 
             elif message.content.startswith('!who '):
                 raidId = message.content[5:]
-                em = raids.get_raiders_embed(raidId)
-                await client.send_message(message.author, embed=em)
+                msg = raids.get_raiders_gh(raidId)
+                await client.send_message(message.author, msg)
 
             elif message.content.startswith('!join '):
-                raidId = message.content[6:]
-                msgData = raids.add_raider_gh(raidId, message.author.display_name)
+                commandDetails = message.content[6:].split(' ')
+                raidId = commandDetails[0]
+                party_size = 1
+                start_time = None
+                if len(commandDetails) > 1:
+                    party_size = commandDetails[1]
+                if len(commandDetails) > 2:
+                    start_time = ' '.join(str(x) for x in commandDetails[2:])
+                msgData = raids.add_raider_gh(raidId, message.author.display_name, party_size, start_time)
                 await client.edit_message(msgData[0], embed=msgData[1])
 
             elif message.content.startswith('!leave '):
