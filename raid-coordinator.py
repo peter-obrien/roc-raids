@@ -5,6 +5,7 @@ from datetime import datetime, timedelta
 from pytz import timezone
 import pytz
 from raids import RaidMap, Raid
+from errors import InputError
 
 if len(sys.argv) < 2:
     print("Please provide the bot's token.")
@@ -78,9 +79,14 @@ async def on_message(message):
 
             elif message.content.startswith('!who '):
                 raidId = message.content[5:]
-                raid = raids.get_raid(raidId)
-                msg = raid.get_raiders()
-                await client.send_message(message.author, msg)
+                try:
+                    raid = raids.get_raid(raidId)
+                    msg = raid.get_raiders()
+                    await client.send_message(message.author, msg)
+                except InputError as err:
+                    await client.send_message(message.author, err.message)
+                finally:
+                    await client.delete_message(message)
 
             elif message.content.startswith('!join '):
                 commandDetails = message.content[6:].split(' ')
@@ -91,26 +97,44 @@ async def on_message(message):
                     party_size = commandDetails[1]
                 if len(commandDetails) > 2:
                     start_time = ' '.join(str(x) for x in commandDetails[2:])
-                raid = raids.get_raid(raidId)
-                raid.add_raider(message.author.display_name, party_size, start_time)
-                for msg in raid.messages:
-                    await client.edit_message(msg, embed=raid.embed)
+                try:
+                    raid = raids.get_raid(raidId)
+                    raid.add_raider(message.author.display_name, party_size, start_time)
+                    for msg in raid.messages:
+                        await client.edit_message(msg, embed=raid.embed)
+                except InputError as err:
+                    await client.send_message(message.author, err.message)
+                    await client.delete_message(message)
 
             elif message.content.startswith('!leave '):
                 raidId = message.content[7:]
-                raid = raids.get_raid(raidId)
-                raid.remove_raider(message.author.display_name)
-                for msg in raid.messages:
-                    await client.edit_message(msg, embed=raid.embed)
+                try:
+                    raid = raids.get_raid(raidId)
+                    raid.remove_raider(message.author.display_name)
+                    for msg in raid.messages:
+                        await client.edit_message(msg, embed=raid.embed)
+                except InputError as err:
+                    await client.send_message(message.author, err.message)
+                    await client.delete_message(message)
 
             elif message.content.startswith('!details '):
                 raidId = message.content[9:]
-                raid = raids.get_raid(raidId)
-                await client.send_message(message.author, embed=raid.embed)
+                try:
+                    raid = raids.get_raid(raidId)
+                    await client.send_message(message.author, embed=raid.embed)
+                except InputError as err:
+                    await client.send_message(message.author, err.message)
+                finally:
+                    await client.delete_message(message)
 
             elif message.content.startswith('!raid '): # alias for !details
                 raidId = message.content[6:]
-                raid = raids.get_raid(raidId)
-                await client.send_message(message.author, embed=raid.embed)
+                try:
+                    raid = raids.get_raid(raidId)
+                    await client.send_message(message.author, embed=raid.embed)
+                except InputError as err:
+                    await client.send_message(message.author, err.message)
+                finally:
+                    await client.delete_message(message)
 
 client.run(sys.argv[1])

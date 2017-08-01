@@ -1,5 +1,6 @@
 from raider import RaidParticipant
 from datetime import datetime
+from errors import InputError
 
 class Raid:
     def __init__(self, pokemon, gym, end):
@@ -69,6 +70,8 @@ class RaidMap:
         self.hashedRaids[hash(raid)] = raid
 
     def get_raid(self, raidId):
+        if str(raidId) not in self.raids:
+            raise InputError('Raid #' + str(raidId) + ' does not exist.' )
         return self.raids[str(raidId)]
 
     def clear_raids(self):
