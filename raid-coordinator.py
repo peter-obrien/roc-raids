@@ -19,6 +19,12 @@ timeFmt = '%m/%d %I:%M %p'
 googleDirectionsUrlBase='https://www.google.com/maps/dir/Current+Location/'
 embedColor = 0x408fd0
 
+helpMessage=discord.Embed(title="Commands", description="Here are the commands that the roc-raids bot recognizes.", color=0xf0040b)
+helpMessage.add_field(name="!join [raid-id] (party-size) (start-time)", value="Use this command to signal to others that you wish to attend the raid. The message with the specified raid-id will be updated to reflect your party's size. Can be used again to overwrite your previous party for raid.", inline=False)
+helpMessage.add_field(name="!leave [raid-id]", value="Can't make the raid you intended to join? Use this to take your party off the list.", inline=False)
+helpMessage.add_field(name="!raid [raid-id]", value="Receive a PM from the bot with the raid summary. Can also use !details [raid-id]", inline=False)
+helpMessage.add_field(name="!who [raid-id]", value="Receive a PM from the bot with the details of those that used the !join command.", inline=False)
+
 @client.event
 async def on_ready():
     print('Logged in as')
@@ -70,13 +76,7 @@ async def on_message(message):
                     await client.delete_message(message)
         else:
             if message.content.startswith('!rocraids') or message.content.startswith('!roc-raids'):
-                em=discord.Embed(title="Commands", description="Here are the commands that the roc-raids bot recognizes.", color=0xf0040b)
-                em.add_field(name="!join [raid-id] (party-size) (start-time)", value="Use this command to signal to others that you wish to attend the raid. The message with the specified raid-id will be updated to reflect your party's size. Can be used again to overwrite your previous party for raid.", inline=False)
-                em.add_field(name="!leave [raid-id]", value="Can't make the raid you intended to join? Use this to take your party off the list.", inline=False)
-                em.add_field(name="!raid [raid-id]", value="Receive a PM from the bot with the raid summary. Can also use !details [raid-id]", inline=False)
-                em.add_field(name="!who [raid-id]", value="Receive a PM from the bot with the details of those that used the !join command.", inline=False)
-                await client.send_message(message.channel, embed=em)
-
+                await client.send_message(message.channel, embed=helpMessage)
             elif message.content.startswith('!who '):
                 raidId = message.content[5:]
                 try:
@@ -136,5 +136,8 @@ async def on_message(message):
                     await client.send_message(message.author, err.message)
                 finally:
                     await client.delete_message(message)
+            elif message.content.startswith('!'):
+                await client.send_message(message.author, embed=helpMessage)
+                await client.delete_message(message)
 
 client.run(sys.argv[1])
