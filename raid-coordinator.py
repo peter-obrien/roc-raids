@@ -47,17 +47,23 @@ async def on_message(message):
 
                 desc = gymName + '\n' + '*Ends: ' + easternEndTime.strftime(timeFmt) + '*'
 
-                raidId = raids.generate_raid_id()
-                result = discord.Embed(title=pokemon + ': Raid #' + str(raidId), url=gmapUrl, description=desc, colour=embedColor)
+                raid = raids.create_raid(pokemon, gymName, easternEndTime)
 
-                thumbnailContent = message.embeds[0]['thumbnail']
-                result.set_thumbnail(url=thumbnailContent['url'])
-                result.thumbnail.height=thumbnailContent['height']
-                result.thumbnail.width=thumbnailContent['width']
-                result.thumbnail.proxy_url=thumbnailContent['proxy_url']
+                if raid.id is None:
+                    raid.id = raids.generate_raid_id()
+                    raids.store_raid(raid)
 
-                raidMessage = await client.send_message(message.channel, embed=result)
-                raid = raids.store_raid(raidId, pokemon, gymName, easternEndTime, result)
+                    result = discord.Embed(title=pokemon + ': Raid #' + str(raid.id), url=gmapUrl, description=desc, colour=embedColor)
+
+                    thumbnailContent = message.embeds[0]['thumbnail']
+                    result.set_thumbnail(url=thumbnailContent['url'])
+                    result.thumbnail.height=thumbnailContent['height']
+                    result.thumbnail.width=thumbnailContent['width']
+                    result.thumbnail.proxy_url=thumbnailContent['proxy_url']
+
+                    raid.embed = result
+
+                raidMessage = await client.send_message(message.channel, embed=raid.embed)
                 raid.add_message(raidMessage)
                 if message.id != '341294312749006849':
                     await client.delete_message(message)

@@ -1,12 +1,13 @@
 from raider import RaidParticipant
+from datetime import datetime
 
 class Raid:
-    def __init__(self, raidId, pokemon, gym, end, embed):
-        self.id = raidId
+    def __init__(self, pokemon, gym, end):
         self.pokemon = pokemon
         self.gym = gym
         self.end = end
-        self.embed = embed
+        self.id = None
+        self.embed = None
         self.raiders = set()
         self.messages = []
 
@@ -39,29 +40,37 @@ class Raid:
     def add_message(self, message):
         self.messages.append(message)
 
+    def __hash__(self):
+        return hash((self.pokemon, self.gym, self.end.month, self.end.day, self.end.hour))
+
+    def __eq__(self, other):
+        return self.pokemon == other.pokemon and self.gym == other.gym and self.end.month == other.end.month and self.end.day == other.end.day and self.end.hour == other.end.hour
+
 class RaidMap:
     def __init__(self):
         self.raids = dict()
+        self.hashedRaids = dict()
         self.raidIdSeed = 0
 
     def generate_raid_id(self):
         self.raidIdSeed += 1
         return self.raidIdSeed
 
-    def store_raid(self, raidId, pokemon, gym, end, raidMessageEmbed):
-        raid = Raid(raidId, pokemon, gym, end, raidMessageEmbed)
-        self.raids[str(raidId)] = raid
+    def create_raid(self, pokemon, gym, end):
+        raid = Raid(pokemon, gym, end)
+        # Check to see if this raid was already generated from a different channel
+        raidHash = hash(raid)
+        if raidHash in self.hashedRaids:
+            return self.hashedRaids[raidHash]
         return raid
+
+    def store_raid(self, raid):
+        self.raids[str(raid.id)] = raid
+        self.hashedRaids[hash(raid)] = raid
 
     def get_raid(self, raidId):
         return self.raids[str(raidId)]
 
-    def get_raiders_gh(self, raidId):
-        result = 'Here are the ' + str(self.get_participant_number(raidId)) + ' participants for raid #' + str(raidId) + ':'
-        for raider in self.raiders[raidId]:
-            result += '\n\t' + str(raider)
-        return result
-
     def clear_raids(self):
         self.raids.clear()
-        self.raiders.clear()
+        self.hashedRaids.clear()
