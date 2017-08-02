@@ -35,7 +35,7 @@ async def on_ready():
 @client.event
 async def on_message(message):
 
-    if message.channel.name == 'gymhuntr' and message.server.message.content.startswith('!go'):
+    if message.content.startswith('!go'):
         message = await client.get_message(message.channel, '341294312749006849')
 
     if message.author.name == 'GymHuntrBot':
