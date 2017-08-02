@@ -20,10 +20,10 @@ googleDirectionsUrlBase='https://www.google.com/maps/dir/Current+Location/'
 embedColor = 0x408fd0
 
 helpMessage=discord.Embed(title="Commands", description="Here are the commands that the roc-raids bot recognizes.", color=0xf0040b)
-helpMessage.add_field(name="!join [raid-id] (party-size) (start-time)", value="Use this command to signal to others that you wish to attend the raid. The message with the specified raid-id will be updated to reflect your party's size. Can be used again to overwrite your previous party for raid.", inline=False)
+helpMessage.add_field(name="!join [raid-id] (party-size) (start-time)", value="Use this command to signal to others that you wish to attend the raid. The message with the specified raid-id will be updated to reflect your party's size. Can be used again to overwrite your previous party for the raid.", inline=False)
 helpMessage.add_field(name="!leave [raid-id]", value="Can't make the raid you intended to join? Use this to take your party off the list.", inline=False)
 helpMessage.add_field(name="!raid [raid-id]", value="Receive a PM from the bot with the raid summary. Can also use !details [raid-id]", inline=False)
-helpMessage.add_field(name="!who [raid-id]", value="Receive a PM from the bot with the details of those that used the !join command.", inline=False)
+helpMessage.add_field(name="!who [raid-id]", value="Receive a PM from the bot with the details of those that are attending the raid via the !join command.", inline=False)
 
 @client.event
 async def on_ready():
@@ -75,9 +75,7 @@ async def on_message(message):
                 if message.id != '341294312749006849':
                     await client.delete_message(message)
         else:
-            if message.content.startswith('!rocraids') or message.content.startswith('!roc-raids'):
-                await client.send_message(message.channel, embed=helpMessage)
-            elif message.content.startswith('!who '):
+            if message.content.startswith('!who '):
                 raidId = message.content[5:]
                 try:
                     raid = raids.get_raid(raidId)
