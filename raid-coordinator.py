@@ -92,7 +92,7 @@ async def on_message(message):
             elif message.content.startswith('!join '):
                 commandDetails = message.content[6:].split(' ')
                 raidId = commandDetails[0]
-                party_size = 1
+                party_size = '1'
                 start_time = None
                 if len(commandDetails) > 1:
                     party_size = commandDetails[1]

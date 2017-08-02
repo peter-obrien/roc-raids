@@ -13,6 +13,8 @@ class Raid:
         self.messages = []
 
     def add_raider(self, raiderName, partySize=1, startTime=None):
+        if not partySize.isdigit() :
+            raise InputError("The party size entered is not a number. If you're attending alone please use 1." )
         raider = RaidParticipant(raiderName, int(partySize), startTime)
         if raider in self.raiders:
             self.raiders.remove(raider)
