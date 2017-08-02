@@ -18,10 +18,16 @@ class Raid:
             self.raiders.remove(raider)
         self.raiders.add(raider)
         self.update_embed_participants()
+        return "{} {}has RSVP'd to {} Raid #{} at {}".format(raiderName, (' +{} '.format(str(int(partySize)-1)) if int(partySize) > 1 else ''), self.pokemon, self.id, self.gym)
 
     def remove_raider(self, raiderName):
-        self.raiders.discard(RaidParticipant(raiderName))
-        self.update_embed_participants()
+        tempRaider = RaidParticipant(raiderName)
+        if tempRaider in self.raiders:
+            self.raiders.discard(tempRaider)
+            self.update_embed_participants()
+            return '{} is no longer attending Raid #{}'.format(raiderName, self.id)
+        else:
+            return None
 
     def get_participant_number(self):
         result = 0
@@ -33,7 +39,7 @@ class Raid:
         self.embed.set_footer(text='Participants: ' + str(self.get_participant_number()))
 
     def get_raiders(self):
-        result = 'Here are the ' + str(self.get_participant_number()) + ' participants for raid #' + str(self.id) + ':'
+        result = 'Here are the ' + str(self.get_participant_number()) + ' participants for Raid #' + str(self.id) + ':'
         for raider in self.raiders:
             result += '\n\t' + str(raider)
         return result

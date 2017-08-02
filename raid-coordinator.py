@@ -100,9 +100,11 @@ async def on_message(message):
                     start_time = ' '.join(str(x) for x in commandDetails[2:])
                 try:
                     raid = raids.get_raid(raidId)
-                    raid.add_raider(message.author.display_name, party_size, start_time)
+                    displayMsg = raid.add_raider(message.author.display_name, party_size, start_time)
                     for msg in raid.messages:
                         await client.edit_message(msg, embed=raid.embed)
+                    await client.send_message(message.channel, displayMsg)
+                    await client.delete_message(message)
                 except InputError as err:
                     await client.send_message(message.author, err.message)
                     if not message.channel.is_private:
@@ -112,9 +114,12 @@ async def on_message(message):
                 raidId = message.content[7:]
                 try:
                     raid = raids.get_raid(raidId)
-                    raid.remove_raider(message.author.display_name)
-                    for msg in raid.messages:
-                        await client.edit_message(msg, embed=raid.embed)
+                    displayMsg = raid.remove_raider(message.author.display_name)
+                    if displayMsg is not None:
+                        for msg in raid.messages:
+                            await client.edit_message(msg, embed=raid.embed)
+                        await client.send_message(message.channel, displayMsg)
+                    await client.delete_message(message)
                 except InputError as err:
                     await client.send_message(message.author, err.message)
                     if not message.channel.is_private:
