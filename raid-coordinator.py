@@ -86,7 +86,8 @@ async def on_message(message):
                 except InputError as err:
                     await client.send_message(message.author, err.message)
                 finally:
-                    await client.delete_message(message)
+                    if not message.channel.is_private:
+                        await client.delete_message(message)
 
             elif message.content.startswith('!join '):
                 commandDetails = message.content[6:].split(' ')
@@ -104,7 +105,8 @@ async def on_message(message):
                         await client.edit_message(msg, embed=raid.embed)
                 except InputError as err:
                     await client.send_message(message.author, err.message)
-                    await client.delete_message(message)
+                    if not message.channel.is_private:
+                        await client.delete_message(message)
 
             elif message.content.startswith('!leave '):
                 raidId = message.content[7:]
@@ -115,7 +117,8 @@ async def on_message(message):
                         await client.edit_message(msg, embed=raid.embed)
                 except InputError as err:
                     await client.send_message(message.author, err.message)
-                    await client.delete_message(message)
+                    if not message.channel.is_private:
+                        await client.delete_message(message)
 
             elif message.content.startswith('!details '):
                 raidId = message.content[9:]
@@ -125,7 +128,8 @@ async def on_message(message):
                 except InputError as err:
                     await client.send_message(message.author, err.message)
                 finally:
-                    await client.delete_message(message)
+                    if not message.channel.is_private:
+                        await client.delete_message(message)
 
             elif message.content.startswith('!raid '): # alias for !details
                 raidId = message.content[6:]
@@ -135,9 +139,11 @@ async def on_message(message):
                 except InputError as err:
                     await client.send_message(message.author, err.message)
                 finally:
-                    await client.delete_message(message)
+                    if not message.channel.is_private:
+                        await client.delete_message(message)
             elif message.content.startswith('!'):
                 await client.send_message(message.author, embed=helpMessage)
-                await client.delete_message(message)
+                if not message.channel.is_private:
+                    await client.delete_message(message)
 
 client.run(sys.argv[1])

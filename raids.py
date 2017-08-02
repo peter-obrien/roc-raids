@@ -77,3 +77,4 @@ class RaidMap:
     def clear_raids(self):
         self.raids.clear()
         self.hashedRaids.clear()
+        self.raidIdSeed = 0
