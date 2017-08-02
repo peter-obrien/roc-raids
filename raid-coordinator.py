@@ -1,15 +1,29 @@
 import discord
 import asyncio
 import sys
+import configparser
 from datetime import datetime, timedelta
 from pytz import timezone
 import pytz
 from raids import RaidMap, Raid
 from errors import InputError
 
-if len(sys.argv) < 2:
-    print("Please provide the bot's token.")
+propFilename = 'properties.ini'
+config = configparser.ConfigParser()
+config.read(propFilename)
+serverId = config['DEFAULT']['server_id']
+rsvpChannelId = config['DEFAULT']['rsvp_channel_id']
+botToken = config['DEFAULT']['bot_token']
+if not serverId:
+    print('server_id is not set. Please update ' + propFilename)
     quit()
+if not rsvpChannelId:
+    print('rsvp_channel_id is not set. Please update ' + propFilename)
+    quit()
+if not botToken:
+    print('bot_token is not set. Please update ' + propFilename)
+    quit()
+
 
 client = discord.Client()
 raids = RaidMap()
@@ -27,10 +41,22 @@ helpMessage.add_field(name="!who [raid-id]", value="Receive a PM from the bot wi
 
 @client.event
 async def on_ready():
+    global discordServer
+    global rsvpChannel
     print('Logged in as')
     print(client.user.name)
     print(client.user.id)
     print('------')
+
+    discordServer = client.get_server(serverId)
+    if discordServer is None:
+        print('Could not obtain server: [{}]'.format(serverId))
+        quit()
+
+    rsvpChannel = discordServer.get_channel(rsvpChannelId)
+    if rsvpChannel is None:
+        print('Could not location RSVP channel: [{}]'.format(rsvpChannelId))
+        quit(1)
 
 @client.event
 async def on_message(message):
@@ -100,7 +126,7 @@ async def on_message(message):
                 displayMsg = raid.add_raider(message.author.display_name, party_size, start_time)
                 for msg in raid.messages:
                     await client.edit_message(msg, embed=raid.embed)
-                await client.send_message(message.channel, displayMsg)
+                await client.send_message(rsvpChannel, displayMsg)
                 if not message.channel.is_private:
                     await client.delete_message(message)
             except InputError as err:
@@ -116,7 +142,7 @@ async def on_message(message):
                 if displayMsg is not None:
                     for msg in raid.messages:
                         await client.edit_message(msg, embed=raid.embed)
-                    await client.send_message(message.channel, displayMsg)
+                    await client.send_message(rsvpChannel, displayMsg)
                 if not message.channel.is_private:
                     await client.delete_message(message)
             except InputError as err:
@@ -150,4 +176,4 @@ async def on_message(message):
             if not message.channel.is_private:
                 await client.delete_message(message)
 
-client.run(sys.argv[1])
+client.run(botToken)
