@@ -100,7 +100,10 @@ async def on_message(message):
             if message.id != '341294312749006849':
                 await client.delete_message(message)
     else:
-        if message.content.startswith('!who '):
+        # Covert the message to lowercase to make the commands case-insensitive.
+        lowercaseMessge = message.content.lower()
+
+        if lowercaseMessge.startswith('!who '):
             raidId = message.content[5:]
             try:
                 raid = raids.get_raid(raidId)
@@ -112,7 +115,7 @@ async def on_message(message):
                 if not message.channel.is_private:
                     await client.delete_message(message)
 
-        elif message.content.startswith('!join '):
+        elif lowercaseMessge.startswith('!join '):
             commandDetails = message.content[6:].split(' ')
             raidId = commandDetails[0]
             party_size = '1'
@@ -134,7 +137,7 @@ async def on_message(message):
                 if not message.channel.is_private:
                     await client.delete_message(message)
 
-        elif message.content.startswith('!leave '):
+        elif lowercaseMessge.startswith('!leave '):
             raidId = message.content[7:]
             try:
                 raid = raids.get_raid(raidId)
@@ -150,7 +153,7 @@ async def on_message(message):
                 if not message.channel.is_private:
                     await client.delete_message(message)
 
-        elif message.content.startswith('!details '):
+        elif lowercaseMessge.startswith('!details '):
             raidId = message.content[9:]
             try:
                 raid = raids.get_raid(raidId)
@@ -161,7 +164,7 @@ async def on_message(message):
                 if not message.channel.is_private:
                     await client.delete_message(message)
 
-        elif message.content.startswith('!raid '): # alias for !details
+        elif lowercaseMessge.startswith('!raid '): # alias for !details
             raidId = message.content[6:]
             try:
                 raid = raids.get_raid(raidId)
@@ -171,7 +174,7 @@ async def on_message(message):
             finally:
                 if not message.channel.is_private:
                     await client.delete_message(message)
-        elif message.content.startswith('!'):
+        elif lowercaseMessge.startswith('!'):
             await client.send_message(message.author, embed=helpMessage)
             if not message.channel.is_private:
                 await client.delete_message(message)
