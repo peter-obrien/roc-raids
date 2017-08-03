@@ -177,8 +177,9 @@ async def on_message(message):
                 await client.delete_message(message)
         elif message.channel == rsvpChannel:
             # Only bot commands can be used in the RSVP channel.
-            await client.send_message(message.author, 'Only bot commands may be used in the RSVP channel.')
-            await client.delete_message(message)
+            if not message.author.bot:
+                await client.send_message(message.author, 'Only bot commands may be used in the RSVP channel.')
+                await client.delete_message(message)
 
 
 client.run(botToken)
