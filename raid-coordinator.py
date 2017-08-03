@@ -77,13 +77,13 @@ async def on_message(message):
             endTime = message.timestamp + timedelta(seconds=secondsToEnd)
             easternEndTime = endTime.replace(tzinfo=utcTz).astimezone(easternTz)
 
-            desc = gymName + '\n' + '*Ends: ' + easternEndTime.strftime(timeFmt) + '*'
-
             raid = raids.create_raid(pokemon, gymName, easternEndTime)
 
             if raid.id is None:
                 raid.id = raids.generate_raid_id()
                 raids.store_raid(raid)
+
+                desc = gymName + '\n' + '*Ends: ' + easternEndTime.strftime(timeFmt) + '*'
 
                 result = discord.Embed(title=pokemon + ': Raid #' + str(raid.id), url=gmapUrl, description=desc, colour=embedColor)
 
