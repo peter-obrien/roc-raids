@@ -190,7 +190,6 @@ async def background_cleanup():
         # Delete expired raids
         expiredRaids = []
         currentTime = datetime.now(easternTz)
-        print(str(currentTime))
         for raid in raids.raids.values():
             if currentTime > raid.end:
                 expiredRaids.append(raid)
