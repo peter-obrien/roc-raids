@@ -82,6 +82,10 @@ class RaidMap:
             raise InputError('Raid #' + str(raidId) + ' does not exist.' )
         return self.raids[str(raidId)]
 
+    def remove_raid(self, raid):
+        self.raids.pop(str(raid.id), None)
+        self.hashedRaids.pop(hash(raid), None)
+
     def clear_raids(self):
         self.raids.clear()
         self.hashedRaids.clear()

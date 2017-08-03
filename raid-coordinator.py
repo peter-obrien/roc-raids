@@ -184,5 +184,23 @@ async def on_message(message):
                 await client.send_message(message.author, 'Only bot commands may be used in the RSVP channel.')
                 await client.delete_message(message)
 
+async def background_cleanup():
+    await client.wait_until_ready()
+    while not client.is_closed:
+        # Delete expired raids
+        expiredRaids = []
+        currentTime = datetime.now(easternTz)
+        print(str(currentTime))
+        for raid in raids.raids.values():
+            if currentTime > raid.end:
+                expiredRaids.append(raid)
+        for raid in expiredRaids:
+            for message in raid.messages:
+                await client.delete_message(message)
+            raids.remove_raid(raid)
+
+        await asyncio.sleep(60) # task runs every 60 seconds
+
+client.loop.create_task(background_cleanup())
 
 client.run(botToken)
