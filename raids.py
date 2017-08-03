@@ -79,7 +79,10 @@ class RaidMap:
 
     def get_raid(self, raidId):
         if str(raidId) not in self.raids:
-            raise InputError('Raid #' + str(raidId) + ' does not exist.' )
+            if raidId.isdigit() and int(raidId) <= self.raidIdSeed:
+                raise InputError('Raid #' + str(raidId) + ' has expired.' )
+            else:
+                raise InputError('Raid #' + str(raidId) + ' does not exist.' )
         return self.raids[str(raidId)]
 
     def remove_raid(self, raid):
