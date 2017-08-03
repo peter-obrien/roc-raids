@@ -16,11 +16,16 @@ class Raid:
         if not partySize.isdigit() :
             raise InputError("The party size entered [" + partySize + "] is not a number. If you're attending alone, please use 1." )
         raider = RaidParticipant(raiderName, int(partySize), startTime)
-        if raider in self.raiders:
+        alreadyInRaid = raider in self.raiders
+        if alreadyInRaid:
             self.raiders.remove(raider)
         self.raiders.add(raider)
         self.update_embed_participants()
-        return "{} {}has RSVP'd to {} Raid #{} at {}".format(raiderName, (' +{} '.format(str(int(partySize)-1)) if int(partySize) > 1 else ''), self.pokemon, self.id, self.gym)
+        partyDescriptor = (' +{} '.format(str(int(partySize)-1)) if int(partySize) > 1 else '')
+        if alreadyInRaid:
+            return "{} {}has __modified__ their RSVP to {} Raid #{} at {}".format(raiderName, partyDescriptor, self.pokemon, self.id, self.gym)
+        else:
+            return "{} {}has RSVP'd to {} Raid #{} at {}".format(raiderName, partyDescriptor, self.pokemon, self.id, self.gym)
 
     def remove_raider(self, raiderName):
         tempRaider = RaidParticipant(raiderName)
