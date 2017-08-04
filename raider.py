@@ -1,8 +1,8 @@
 class RaidParticipant:
-    def __init__(self, username, party_size=1, start_time=None):
+    def __init__(self, username, party_size=1, notes=None):
         self.username = username
         self.party_size = party_size
-        self.start_time = start_time
+        self.notes = notes
 
     def __eq__(self, other):
         return self.username == other.username
@@ -14,6 +14,6 @@ class RaidParticipant:
         result = self.username
         if self.party_size > 1:
             result += ' +' + str(self.party_size-1)
-        if self.start_time is not None:
-            result += ' at ' + self.start_time
+        if self.notes is not None:
+            result += ': ' + self.notes
         return result

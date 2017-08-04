@@ -119,14 +119,14 @@ async def on_message(message):
             commandDetails = message.content[6:].split(' ')
             raidId = commandDetails[0]
             party_size = '1'
-            start_time = None
+            notes = None
             if len(commandDetails) > 1:
                 party_size = commandDetails[1]
             if len(commandDetails) > 2:
-                start_time = ' '.join(str(x) for x in commandDetails[2:])
+                notes = ' '.join(str(x) for x in commandDetails[2:])
             try:
                 raid = raids.get_raid(raidId)
-                displayMsg = raid.add_raider(message.author.display_name, party_size, start_time)
+                displayMsg = raid.add_raider(message.author.display_name, party_size, notes)
                 for msg in raid.messages:
                     await client.edit_message(msg, embed=raid.embed)
                 if not message.channel.is_private:
