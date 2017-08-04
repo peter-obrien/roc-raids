@@ -129,8 +129,8 @@ async def on_message(message):
                 displayMsg = raid.add_raider(message.author.display_name, party_size, start_time)
                 for msg in raid.messages:
                     await client.edit_message(msg, embed=raid.embed)
-                await client.send_message(rsvpChannel, displayMsg)
                 if not message.channel.is_private:
+                    await client.send_message(rsvpChannel, displayMsg)
                     await client.delete_message(message)
             except InputError as err:
                 await client.send_message(message.author, err.message)
@@ -145,8 +145,8 @@ async def on_message(message):
                 if displayMsg is not None:
                     for msg in raid.messages:
                         await client.edit_message(msg, embed=raid.embed)
-                    await client.send_message(rsvpChannel, displayMsg)
                 if not message.channel.is_private:
+                    await client.send_message(rsvpChannel, displayMsg)
                     await client.delete_message(message)
             except InputError as err:
                 await client.send_message(message.author, err.message)
