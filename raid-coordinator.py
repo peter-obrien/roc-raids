@@ -136,6 +136,11 @@ async def on_message(message):
             if len(commandDetails) > 2:
                 notes = ' '.join(str(x) for x in commandDetails[2:])
             try:
+                author = message.author
+                # If the message is coming from PM we want to use the server's version of the user.
+                if message.channel.is_private:
+                    author = discordServer.get_member(message.author.id)
+
                 raid = raids.get_raid(raidId)
 
                 if raid.channel is None:
@@ -143,32 +148,37 @@ async def on_message(message):
                     raid.channel = raidChannel
 
                 # Add this user to the raid and update all the embeds for the raid.
-                displayMsg = raid.add_raider(message.author.display_name, party_size, notes)
+                displayMsg = raid.add_raider(author.display_name, party_size, notes)
                 for msg in raid.messages:
                     await client.edit_message(msg, embed=raid.embed)
 
                 # Add the user to the private channel for the raid
-                await client.edit_channel_permissions(raid.channel, message.author, read)
-                await client.send_message(raid.channel, '{} wants to do this raid'.format(message.author.mention))
+                await client.edit_channel_permissions(raid.channel, author, read)
+                await client.send_message(raid.channel, '{} wants to do this raid'.format(author.mention))
 
                 # Send message to the RSVP channel
                 if not message.channel.is_private:
                     await client.send_message(rsvpChannel, displayMsg)
                     await client.delete_message(message)
             except InputError as err:
-                await client.send_message(message.author, err.message)
+                await client.send_message(author, err.message)
                 if not message.channel.is_private:
                     await client.delete_message(message)
 
         elif lowercaseMessge.startswith('!leave '):
             raidId = message.content[7:]
             try:
+                author = message.author
+                # If the message is coming from PM we want to use the server's version of the user.
+                if message.channel.is_private:
+                    author = discordServer.get_member(message.author.id)
+
                 raid = raids.get_raid(raidId)
-                displayMsg = raid.remove_raider(message.author.display_name)
+                displayMsg = raid.remove_raider(author.display_name)
 
                 # Remove the user to the private channel for the raid
-                await client.edit_channel_permissions(raid.channel, message.author, not_read)
-                await client.send_message(raid.channel, '**{}** is no longer attending'.format(message.author.display_name))
+                await client.edit_channel_permissions(raid.channel, author, not_read)
+                await client.send_message(raid.channel, '**{}** is no longer attending'.format(author.display_name))
 
                 if displayMsg is not None:
                     for msg in raid.messages:
@@ -177,7 +187,7 @@ async def on_message(message):
                     await client.send_message(rsvpChannel, displayMsg)
                     await client.delete_message(message)
             except InputError as err:
-                await client.send_message(message.author, err.message)
+                await client.send_message(author, err.message)
                 if not message.channel.is_private:
                     await client.delete_message(message)
 
@@ -226,7 +236,7 @@ async def background_cleanup():
             await client.delete_channel(raid.channel)
             raids.remove_raid(raid)
 
-        await asyncio.sleep(60) # task runs every 60 seconds
+        await asyncio.sleep(60*3) # task runs every 60 seconds
 
 client.loop.create_task(background_cleanup())
 
