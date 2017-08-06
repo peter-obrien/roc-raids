@@ -148,17 +148,17 @@ async def on_message(message):
                     raid.channel = raidChannel
 
                 # Add this user to the raid and update all the embeds for the raid.
-                displayMsg = raid.add_raider(author.display_name, party_size, notes)
+                resultTuple = raid.add_raider(author.display_name, party_size, notes)
                 for msg in raid.messages:
                     await client.edit_message(msg, embed=raid.embed)
 
                 # Add the user to the private channel for the raid
                 await client.edit_channel_permissions(raid.channel, author, read)
-                await client.send_message(raid.channel, '{} wants to do this raid'.format(author.mention))
+                await client.send_message(raid.channel, '{}{}'.format(author.mention, resultTuple[0].details()))
 
                 # Send message to the RSVP channel
                 if not message.channel.is_private:
-                    await client.send_message(rsvpChannel, displayMsg)
+                    await client.send_message(rsvpChannel, resultTuple[1])
                     await client.delete_message(message)
             except InputError as err:
                 await client.send_message(author, err.message)

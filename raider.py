@@ -12,6 +12,11 @@ class RaidParticipant:
 
     def __str__(self):
         result = self.username
+        result += details()
+        return result
+
+    def details(self):
+        result = ''
         if self.party_size > 1:
             result += ' +' + str(self.party_size-1)
         if self.notes is not None:

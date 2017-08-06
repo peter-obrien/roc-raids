@@ -24,9 +24,9 @@ class Raid:
         self.update_embed_participants()
         partyDescriptor = (' +{} '.format(str(int(partySize)-1)) if int(partySize) > 1 else '')
         if alreadyInRaid:
-            return "{} {}has __modified__ their RSVP to {} Raid #{} at {}".format(raiderName, partyDescriptor, self.pokemon, self.id, self.gym)
+            return (raider, "{} {}has __modified__ their RSVP to {} Raid #{} at {}".format(raiderName, partyDescriptor, self.pokemon, self.id, self.gym))
         else:
-            return "{} {}has RSVP'd to {} Raid #{} at {}".format(raiderName, partyDescriptor, self.pokemon, self.id, self.gym)
+            return (raider, "{} {}has RSVP'd to {} Raid #{} at {}".format(raiderName, partyDescriptor, self.pokemon, self.id, self.gym))
 
     def remove_raider(self, raiderName):
         tempRaider = RaidParticipant(raiderName)
