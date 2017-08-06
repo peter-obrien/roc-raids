@@ -11,6 +11,7 @@ class Raid:
         self.embed = None
         self.raiders = set()
         self.messages = []
+        self.channel = None
 
     def add_raider(self, raiderName, partySize=1, notes=None):
         if not partySize.isdigit() :

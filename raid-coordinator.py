@@ -33,6 +33,8 @@ utcTz = timezone('UTC')
 timeFmt = '%m/%d %I:%M %p'
 googleDirectionsUrlBase='https://www.google.com/maps/dir/Current+Location/'
 embedColor = 0x408fd0
+not_read = discord.PermissionOverwrite(read_messages=False)
+read = discord.PermissionOverwrite(read_messages=True)
 
 helpMessage=discord.Embed(title="Commands", description="Here are the commands that the roc-raids bot recognizes.", color=0xf0040b)
 helpMessage.add_field(name="!join [raid id] (party size) (notes/start time)", value="Use this command to signal to others that you wish to attend the raid. The message with the specified raid id will be updated to reflect your party's size. Can be used again to overwrite your previous party for the raid.", inline=False)
@@ -135,9 +137,21 @@ async def on_message(message):
                 notes = ' '.join(str(x) for x in commandDetails[2:])
             try:
                 raid = raids.get_raid(raidId)
+
+                if raid.channel is None:
+                    raidChannel = await client.create_channel(discordServer, 'raid-{}-chat'.format(raid.id), (discordServer.default_role, not_read), (discordServer.me, read))
+                    raid.channel = raidChannel
+
+                # Add this user to the raid and update all the embeds for the raid.
                 displayMsg = raid.add_raider(message.author.display_name, party_size, notes)
                 for msg in raid.messages:
                     await client.edit_message(msg, embed=raid.embed)
+
+                # Add the user to the private channel for the raid
+                await client.edit_channel_permissions(raid.channel, message.author, read)
+                await client.send_message(raid.channel, '{} wants to do this raid'.format(message.author.mention))
+
+                # Send message to the RSVP channel
                 if not message.channel.is_private:
                     await client.send_message(rsvpChannel, displayMsg)
                     await client.delete_message(message)
@@ -204,6 +218,7 @@ async def background_cleanup():
         for raid in expiredRaids:
             for message in raid.messages:
                 await client.delete_message(message)
+            await client.delete_channel(raid.channel)
             raids.remove_raid(raid)
 
         await asyncio.sleep(60) # task runs every 60 seconds
