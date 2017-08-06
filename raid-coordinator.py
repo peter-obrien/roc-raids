@@ -165,6 +165,11 @@ async def on_message(message):
             try:
                 raid = raids.get_raid(raidId)
                 displayMsg = raid.remove_raider(message.author.display_name)
+
+                # Remove the user to the private channel for the raid
+                await client.edit_channel_permissions(raid.channel, message.author, not_read)
+                await client.send_message(raid.channel, '**{}** is no longer attending'.format(message.author.display_name))
+
                 if displayMsg is not None:
                     for msg in raid.messages:
                         await client.edit_message(msg, embed=raid.embed)
