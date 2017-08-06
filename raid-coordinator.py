@@ -14,6 +14,7 @@ config.read(propFilename)
 serverId = config['DEFAULT']['server_id']
 rsvpChannelId = config['DEFAULT']['rsvp_channel_id']
 botToken = config['DEFAULT']['bot_token']
+botOnlyChannelIds = config['DEFAULT']['bot_only_channels']
 if not serverId:
     print('server_id is not set. Please update ' + propFilename)
     quit()
@@ -43,6 +44,7 @@ helpMessage.add_field(name="!who [raid id]", value="Receive a PM from the bot wi
 async def on_ready():
     global discordServer
     global rsvpChannel
+    global botOnlyChannels
     print('Logged in as')
     print(client.user.name)
     print(client.user.id)
@@ -57,6 +59,13 @@ async def on_ready():
     if rsvpChannel is None:
         print('Could not location RSVP channel: [{}]'.format(rsvpChannelId))
         quit(1)
+
+    botOnlyChannels = []
+    tokens = botOnlyChannelIds.split(',')
+    for token in tokens:
+        channel = discordServer.get_channel(token.strip())
+        if channel is not None:
+            botOnlyChannels.append(channel)
 
 @client.event
 async def on_message(message):
@@ -178,10 +187,9 @@ async def on_message(message):
             await client.send_message(message.author, embed=helpMessage)
             if not message.channel.is_private:
                 await client.delete_message(message)
-        elif message.channel == rsvpChannel:
-            # Only bot commands can be used in the RSVP channel.
+        elif message.channel in botOnlyChannels:
             if not message.author.bot:
-                await client.send_message(message.author, 'Only bot commands may be used in the RSVP channel.')
+                await client.send_message(message.author, 'Only bot commands may be used in this channel.')
                 await client.delete_message(message)
 
 async def background_cleanup():
