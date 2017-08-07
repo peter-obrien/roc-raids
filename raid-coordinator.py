@@ -233,10 +233,11 @@ async def background_cleanup():
         for raid in expiredRaids:
             for message in raid.messages:
                 await client.delete_message(message)
-            await client.delete_channel(raid.channel)
+            if raid.channel is not None:
+                await client.delete_channel(raid.channel)
             raids.remove_raid(raid)
 
-        await asyncio.sleep(60*3) # task runs every 60 seconds
+        await asyncio.sleep(60) # task runs every 60 seconds
 
 client.loop.create_task(background_cleanup())
 
