@@ -12,7 +12,7 @@ class RaidParticipant:
 
     def __str__(self):
         result = self.username
-        result += details()
+        result += self.details()
         return result
 
     def details(self):
