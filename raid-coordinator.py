@@ -109,7 +109,10 @@ async def on_message(message):
             raidMessage = await client.send_message(message.channel, embed=raid.embed)
             raid.add_message(raidMessage)
             if message.id != '341294312749006849':
-                await client.delete_message(message)
+                try:
+                    await client.delete_message(message)
+                except discord.errors.NotFound as e:
+                    pass
     else:
         # Covert the message to lowercase to make the commands case-insensitive.
         lowercaseMessge = message.content.lower()
@@ -124,7 +127,10 @@ async def on_message(message):
                 await client.send_message(message.author, err.message)
             finally:
                 if not message.channel.is_private:
-                    await client.delete_message(message)
+                    try:
+                        await client.delete_message(message)
+                    except discord.errors.NotFound as e:
+                        pass
 
         elif lowercaseMessge.startswith('!join '):
             commandDetails = message.content[6:].split(' ')
@@ -159,11 +165,17 @@ async def on_message(message):
                 # Send message to the RSVP channel
                 if not message.channel.is_private:
                     await client.send_message(rsvpChannel, resultTuple[1])
-                    await client.delete_message(message)
+                    try:
+                        await client.delete_message(message)
+                    except discord.errors.NotFound as e:
+                        pass
             except InputError as err:
                 await client.send_message(author, err.message)
                 if not message.channel.is_private:
-                    await client.delete_message(message)
+                    try:
+                        await client.delete_message(message)
+                    except discord.errors.NotFound as e:
+                        pass
 
         elif lowercaseMessge.startswith('!leave '):
             raidId = message.content[7:]
@@ -185,11 +197,17 @@ async def on_message(message):
                         await client.edit_message(msg, embed=raid.embed)
                 if not message.channel.is_private:
                     await client.send_message(rsvpChannel, displayMsg)
-                    await client.delete_message(message)
+                    try:
+                        await client.delete_message(message)
+                    except discord.errors.NotFound as e:
+                        pass
             except InputError as err:
                 await client.send_message(author, err.message)
                 if not message.channel.is_private:
-                    await client.delete_message(message)
+                    try:
+                        await client.delete_message(message)
+                    except discord.errors.NotFound as e:
+                        pass
 
         elif lowercaseMessge.startswith('!details '):
             raidId = message.content[9:]
@@ -200,7 +218,10 @@ async def on_message(message):
                 await client.send_message(message.author, err.message)
             finally:
                 if not message.channel.is_private:
-                    await client.delete_message(message)
+                    try:
+                        await client.delete_message(message)
+                    except discord.errors.NotFound as e:
+                        pass
 
         elif lowercaseMessge.startswith('!raid '): # alias for !details
             raidId = message.content[6:]
@@ -211,15 +232,24 @@ async def on_message(message):
                 await client.send_message(message.author, err.message)
             finally:
                 if not message.channel.is_private:
-                    await client.delete_message(message)
+                    try:
+                        await client.delete_message(message)
+                    except discord.errors.NotFound as e:
+                        pass
         elif lowercaseMessge.startswith('!'):
             await client.send_message(message.author, embed=helpMessage)
             if not message.channel.is_private:
-                await client.delete_message(message)
+                try:
+                    await client.delete_message(message)
+                except discord.errors.NotFound as e:
+                    pass
         elif message.channel in botOnlyChannels:
             if not message.author.bot:
                 await client.send_message(message.author, 'Only bot commands may be used in this channel.')
-                await client.delete_message(message)
+                try:
+                    await client.delete_message(message)
+                except discord.errors.NotFound as e:
+                    pass
 
 async def background_cleanup():
     await client.wait_until_ready()
@@ -232,9 +262,15 @@ async def background_cleanup():
                 expiredRaids.append(raid)
         for raid in expiredRaids:
             for message in raid.messages:
-                await client.delete_message(message)
+                try:
+                    await client.delete_message(message)
+                except discord.errors.NotFound as e:
+                    pass
             if raid.channel is not None:
-                await client.delete_channel(raid.channel)
+                try:
+                    await client.delete_channel(raid.channel)
+                except discord.errors.NotFound as e:
+                    pass
             raids.remove_raid(raid)
 
         await asyncio.sleep(60) # task runs every 60 seconds
