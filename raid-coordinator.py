@@ -135,7 +135,7 @@ async def on_message(message):
                 except discord.errors.NotFound as e:
                     pass
     elif message.channel == raidInputChannel:
-        if len(message.embeds) > 0 and message.author.id != '341353131713757204':
+        if len(message.embeds) > 0:
             theEmbed = message.embeds[0]
 
             titleTokens = theEmbed['title'].split(' (')
