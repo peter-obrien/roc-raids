@@ -59,7 +59,7 @@ class Raid:
         return hash((self.pokemon, self.gym, self.end.month, self.end.day, self.end.hour))
 
     def __eq__(self, other):
-        return self.pokemon == other.pokemon and self.gym == other.gym and self.end.month == other.end.month and self.end.day == other.end.day and self.end.hour == other.end.hour
+        return self.pokemon == other.pokemon and self.gym == other.gym and self.end.month == other.end.month and self.end.day == other.end.day and self.end.hour == other.end.hour and self.end.minute == other.end.minute
 
 class RaidMap:
     def __init__(self):
