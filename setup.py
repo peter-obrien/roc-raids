@@ -1,6 +1,6 @@
 import configparser
 filename = 'properties.ini'
-defaultValues = {'bot_token': '','server_id': '', 'rsvp_channel_id': '', 'bot_only_channels': ''}
+defaultValues = {'bot_token': '','server_id': '', 'rsvp_channel_id': '', 'bot_only_channels': '', 'raid_channel_id':''}
 config = configparser.ConfigParser()
 config.read(filename)
 

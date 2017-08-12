@@ -15,6 +15,7 @@ serverId = config['DEFAULT']['server_id']
 rsvpChannelId = config['DEFAULT']['rsvp_channel_id']
 botToken = config['DEFAULT']['bot_token']
 botOnlyChannelIds = config['DEFAULT']['bot_only_channels']
+raidChannelId = config['DEFAULT']['raid_channel_id']
 if not serverId:
     print('server_id is not set. Please update ' + propFilename)
     quit()
@@ -23,6 +24,9 @@ if not rsvpChannelId:
     quit()
 if not botToken:
     print('bot_token is not set. Please update ' + propFilename)
+    quit()
+if not raidChannelId:
+    print('raid_channel_id is not set. Please update ' + propFilename)
     quit()
 
 
@@ -47,6 +51,7 @@ async def on_ready():
     global discordServer
     global rsvpChannel
     global botOnlyChannels
+    global raidChannel
     print('Logged in as')
     print(client.user.name)
     print(client.user.id)
@@ -59,7 +64,12 @@ async def on_ready():
 
     rsvpChannel = discordServer.get_channel(rsvpChannelId)
     if rsvpChannel is None:
-        print('Could not location RSVP channel: [{}]'.format(rsvpChannelId))
+        print('Could not locate RSVP channel: [{}]'.format(rsvpChannelId))
+        quit(1)
+
+    raidChannel = discordServer.get_channel(raidChannelId)
+    if raidChannel is None:
+        print('Could not locate Raid channel: [{}]'.format(raidChannelId))
         quit(1)
 
     botOnlyChannels = []
@@ -73,7 +83,8 @@ async def on_ready():
 async def on_message(message):
 
     if message.content.startswith('!go'):
-        message = await client.get_message(message.channel, '341294312749006849')
+        # message = await client.get_message(message.channel, '341294312749006849')
+        message = await client.get_message(message.channel, '345895711214141450')
 
     if message.author.name == 'GymHuntrBot':
         if len(message.embeds) > 0:
@@ -113,6 +124,43 @@ async def on_message(message):
                     await client.delete_message(message)
                 except discord.errors.NotFound as e:
                     pass
+    elif message.channel == raidChannel:
+        if len(message.embeds) > 0 and message.author.id != '341353131713757204':
+            theEmbed = message.embeds[0]
+
+            titleTokens = theEmbed['title'].split(' (')
+            pokemon = titleTokens[0]
+            gymName = titleTokens[2].replace(').','').rstrip()
+
+            endTimeTokens = theEmbed['description'].split(' until ')[1].split(' (')[0].split(':')
+            now = datetime.now(easternTz)
+            endTime = now.replace(hour=int(endTimeTokens[0]), minute=int(endTimeTokens[1]), second=0)
+
+            # Get the coordinate of the gym so we can determine which zone(s) it belongs to
+            coordTokens = theEmbed['url'].split('=')[1].split(',')
+            latitude = float(coordTokens[0])
+            longitude = float(coordTokens[1])
+
+            raid = raids.create_raid(pokemon, gymName, endTime)
+
+            if raid.id is None:
+                raid.id = raids.generate_raid_id()
+                raids.store_raid(raid)
+
+                desc = gymName + '\n' + '*Ends: ' + endTime.strftime(timeFmt) + '*'
+
+                result = discord.Embed(title=pokemon + ': Raid #' + str(raid.id), url=theEmbed['url'], description=desc, colour=embedColor)
+
+                thumbnailContent = theEmbed['thumbnail']
+                result.set_thumbnail(url=thumbnailContent['url'])
+                result.thumbnail.height=thumbnailContent['height']
+                result.thumbnail.width=thumbnailContent['width']
+                result.thumbnail.proxy_url=thumbnailContent['proxy_url']
+
+                raid.embed = result
+
+            raidMessage = await client.send_message(message.channel, embed=raid.embed)
+            raid.add_message(raidMessage)
     else:
         # Covert the message to lowercase to make the commands case-insensitive.
         lowercaseMessge = message.content.lower()
@@ -150,8 +198,8 @@ async def on_message(message):
                 raid = raids.get_raid(raidId)
 
                 if raid.channel is None:
-                    raidChannel = await client.create_channel(discordServer, 'raid-{}-chat'.format(raid.id), (discordServer.default_role, not_read), (discordServer.me, read))
-                    raid.channel = raidChannel
+                    privateRaidChannel = await client.create_channel(discordServer, 'raid-{}-chat'.format(raid.id), (discordServer.default_role, not_read), (discordServer.me, read))
+                    raid.channel = privateRaidChannel
 
                 # Add this user to the raid and update all the embeds for the raid.
                 resultTuple = raid.add_raider(author.display_name, party_size, notes)
