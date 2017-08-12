@@ -15,7 +15,8 @@ serverId = config['DEFAULT']['server_id']
 rsvpChannelId = config['DEFAULT']['rsvp_channel_id']
 botToken = config['DEFAULT']['bot_token']
 botOnlyChannelIds = config['DEFAULT']['bot_only_channels']
-raidChannelId = config['DEFAULT']['raid_channel_id']
+raidSourceChannelId = config['DEFAULT']['raid_src_channel_id']
+raidDestChannelId = config['DEFAULT']['raid_dest_channel_id']
 if not serverId:
     print('server_id is not set. Please update ' + propFilename)
     quit()
@@ -25,8 +26,11 @@ if not rsvpChannelId:
 if not botToken:
     print('bot_token is not set. Please update ' + propFilename)
     quit()
-if not raidChannelId:
-    print('raid_channel_id is not set. Please update ' + propFilename)
+if not raidSourceChannelId:
+    print('raid_src_channel_id is not set. Please update ' + propFilename)
+    quit()
+if not raidDestChannelId:
+    print('raid_dest_channel_id is not set. Please update ' + propFilename)
     quit()
 
 
@@ -51,7 +55,8 @@ async def on_ready():
     global discordServer
     global rsvpChannel
     global botOnlyChannels
-    global raidChannel
+    global raidInputChannel
+    global raidDestChannel
     print('Logged in as')
     print(client.user.name)
     print(client.user.id)
@@ -67,9 +72,14 @@ async def on_ready():
         print('Could not locate RSVP channel: [{}]'.format(rsvpChannelId))
         quit(1)
 
-    raidChannel = discordServer.get_channel(raidChannelId)
-    if raidChannel is None:
-        print('Could not locate Raid channel: [{}]'.format(raidChannelId))
+    raidInputChannel = discordServer.get_channel(raidSourceChannelId)
+    if raidInputChannel is None:
+        print('Could not locate Raid srouce channel: [{}]'.format(raidSourceChannelId))
+        quit(1)
+
+    raidDestChannel = discordServer.get_channel(raidDestChannelId)
+    if raidDestChannel is None:
+        print('Could not locate Raid destination channel: [{}]'.format(raidDestChannelId))
         quit(1)
 
     botOnlyChannels = []
@@ -124,7 +134,7 @@ async def on_message(message):
                     await client.delete_message(message)
                 except discord.errors.NotFound as e:
                     pass
-    elif message.channel == raidChannel:
+    elif message.channel == raidInputChannel:
         if len(message.embeds) > 0 and message.author.id != '341353131713757204':
             theEmbed = message.embeds[0]
 
@@ -151,6 +161,14 @@ async def on_message(message):
 
                 result = discord.Embed(title=pokemon + ': Raid #' + str(raid.id), url=theEmbed['url'], description=desc, colour=embedColor)
 
+                imageContent = theEmbed['image']
+                result.set_image(url=imageContent['url'])
+                # result.image.height=imageContent['height']
+                # result.image.width=imageContent['width']
+                result.image.height=750
+                result.image.width=1250
+                result.image.proxy_url=imageContent['proxy_url']
+
                 thumbnailContent = theEmbed['thumbnail']
                 result.set_thumbnail(url=thumbnailContent['url'])
                 result.thumbnail.height=thumbnailContent['height']
@@ -159,7 +177,7 @@ async def on_message(message):
 
                 raid.embed = result
 
-            raidMessage = await client.send_message(message.channel, embed=raid.embed)
+            raidMessage = await client.send_message(raidDestChannel, embed=raid.embed)
             raid.add_message(raidMessage)
     else:
         # Covert the message to lowercase to make the commands case-insensitive.
