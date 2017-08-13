@@ -3,10 +3,12 @@ from datetime import datetime
 from errors import InputError
 
 class Raid:
-    def __init__(self, pokemon, gym, end):
+    def __init__(self, pokemon, gym, end, latitude, longitude):
         self.pokemon = pokemon
         self.gym = gym
         self.end = end
+        self.latitude = latitude
+        self.longitude = longitude
         self.id = None
         self.embed = None
         self.raiders = set()
@@ -59,7 +61,10 @@ class Raid:
         return hash((self.pokemon, self.gym, self.end.month, self.end.day, self.end.hour))
 
     def __eq__(self, other):
-        return self.pokemon == other.pokemon and self.gym == other.gym and self.end.month == other.end.month and self.end.day == other.end.day and self.end.hour == other.end.hour and self.end.minute == other.end.minute
+        return (self.pokemon == other.pokemon
+            and self.latitude == other.latitude and self.longitude == other.longitude
+            and self.end.month == other.end.month and self.end.day == other.end.day
+            and self.end.hour == other.end.hour and self.end.minute == other.end.minute)
 
 class RaidMap:
     def __init__(self):
@@ -71,8 +76,8 @@ class RaidMap:
         self.raidIdSeed += 1
         return self.raidIdSeed
 
-    def create_raid(self, pokemon, gym, end):
-        raid = Raid(pokemon, gym, end)
+    def create_raid(self, pokemon, gym, end, latitude, longitude):
+        raid = Raid(pokemon, gym, end, latitude, longitude)
         # Check to see if this raid was already generated from a different channel
         raidHash = hash(raid)
         if raidHash in self.hashedRaids:

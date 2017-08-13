@@ -98,7 +98,11 @@ async def on_message(message):
 
     if message.author.name == 'GymHuntrBot':
         if len(message.embeds) > 0:
-            gmapUrl = googleDirectionsUrlBase + message.embeds[0]['url'].split('#')[1]
+            gymLocation = message.embeds[0]['url'].split('#')[1]
+            gmapUrl = googleDirectionsUrlBase + gymLocation
+            coordTokens = gymLocation.split(',')
+            latitude = float(coordTokens[0])
+            longitude = float(coordTokens[1])
 
             descTokens = message.embeds[0]['description'].split('\n')
             gymName = descTokens[0]
@@ -109,7 +113,7 @@ async def on_message(message):
             endTime = message.timestamp + timedelta(seconds=secondsToEnd)
             easternEndTime = endTime.replace(tzinfo=utcTz).astimezone(easternTz)
 
-            raid = raids.create_raid(pokemon, gymName, easternEndTime)
+            raid = raids.create_raid(pokemon, gymName, easternEndTime, latitude, longitude)
 
             if raid.id is None:
                 raid.id = raids.generate_raid_id()
@@ -151,7 +155,7 @@ async def on_message(message):
             latitude = float(coordTokens[0])
             longitude = float(coordTokens[1])
 
-            raid = raids.create_raid(pokemon, gymName, endTime)
+            raid = raids.create_raid(pokemon, gymName, endTime, latitude, longitude)
 
             if raid.id is None:
                 raid.id = raids.generate_raid_id()
