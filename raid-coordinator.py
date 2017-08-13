@@ -33,6 +33,7 @@ if not raidDestChannelId:
     print('raid_dest_channel_id is not set. Please update ' + propFilename)
     quit()
 
+test_message_id = config['DEFAULT']['test_message_id']
 
 client = discord.Client()
 raids = RaidMap()
@@ -93,8 +94,7 @@ async def on_ready():
 async def on_message(message):
 
     if message.content.startswith('!go'):
-        # message = await client.get_message(message.channel, '341294312749006849')
-        message = await client.get_message(message.channel, '345895711214141450')
+        message = await client.get_message(message.channel, test_message_id)
 
     if message.author.name == 'GymHuntrBot':
         if len(message.embeds) > 0:
@@ -222,6 +222,9 @@ async def on_message(message):
                 if raid.channel is None:
                     privateRaidChannel = await client.create_channel(discordServer, 'raid-{}-chat'.format(raid.id), (discordServer.default_role, not_read), (discordServer.me, read))
                     raid.channel = privateRaidChannel
+                    # Send the raid card to the top of the channel.
+                    privateChannelRaidMessage = await client.send_message(raid.channel, embed=raid.embed)
+                    raid.add_message(privateChannelRaidMessage)
 
                 # Add this user to the raid and update all the embeds for the raid.
                 resultTuple = raid.add_raider(author.display_name, party_size, notes)
