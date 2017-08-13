@@ -261,15 +261,17 @@ async def on_message(message):
                 raid = raids.get_raid(raidId)
                 displayMsg = raid.remove_raider(author.display_name)
 
-                # Remove the user to the private channel for the raid
-                await client.edit_channel_permissions(raid.channel, author, not_read)
-                await client.send_message(raid.channel, '**{}** is no longer attending'.format(author.display_name))
 
                 if displayMsg is not None:
+                    # Remove the user to the private channel for the raid
+                    await client.edit_channel_permissions(raid.channel, author, not_read)
+                    await client.send_message(raid.channel, '**{}** is no longer attending'.format(author.display_name))
+
                     for msg in raid.messages:
                         await client.edit_message(msg, embed=raid.embed)
+                    if not message.channel.is_private:
+                        await client.send_message(rsvpChannel, displayMsg)
                 if not message.channel.is_private:
-                    await client.send_message(rsvpChannel, displayMsg)
                     try:
                         await client.delete_message(message)
                     except discord.errors.NotFound as e:
