@@ -58,13 +58,12 @@ class Raid:
         self.messages.append(message)
 
     def __hash__(self):
-        return hash((self.pokemon, self.gym, self.end.month, self.end.day, self.end.hour))
+        return hash((self.pokemon, self.latitude, self.longitude))
 
     def __eq__(self, other):
         return (self.pokemon == other.pokemon
-            and self.latitude == other.latitude and self.longitude == other.longitude
-            and self.end.month == other.end.month and self.end.day == other.end.day
-            and self.end.hour == other.end.hour and self.end.minute == other.end.minute)
+            and self.latitude == other.latitude
+            and self.longitude == other.longitude)
 
 class RaidMap:
     def __init__(self):
