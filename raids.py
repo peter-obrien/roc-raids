@@ -103,3 +103,10 @@ class RaidMap:
         self.raids.clear()
         self.hashedRaids.clear()
         self.raidIdSeed = 0
+
+class RaidZone:
+    def __init__(self,channel,lat,lon,raidus):
+        self.channel = channel
+        self.latitude = float(lat)
+        self.longitude = float(lon)
+        self.raidus = float(raidus)
