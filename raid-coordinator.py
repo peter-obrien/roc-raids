@@ -5,7 +5,7 @@ import configparser
 from datetime import datetime, timedelta
 from pytz import timezone
 import pytz
-from raids import RaidMap, Raid
+from raids import RaidMap, Raid, RaidZone
 from errors import InputError
 
 propFilename = 'properties.ini'
@@ -17,6 +17,7 @@ botToken = config['DEFAULT']['bot_token']
 botOnlyChannelIds = config['DEFAULT']['bot_only_channels']
 raidSourceChannelId = config['DEFAULT']['raid_src_channel_id']
 raidDestChannelId = config['DEFAULT']['raid_dest_channel_id']
+zonesRaw = config['DEFAULT']['zones'].split(',')
 if not serverId:
     print('server_id is not set. Please update ' + propFilename)
     quit()
@@ -58,6 +59,7 @@ async def on_ready():
     global botOnlyChannels
     global raidInputChannel
     global raidDestChannel
+    global raidZones
     print('Logged in as')
     print(client.user.name)
     print(client.user.id)
@@ -66,7 +68,7 @@ async def on_ready():
     discordServer = client.get_server(serverId)
     if discordServer is None:
         print('Could not obtain server: [{}]'.format(serverId))
-        quit()
+        quit(1)
 
     rsvpChannel = discordServer.get_channel(rsvpChannelId)
     if rsvpChannel is None:
@@ -81,6 +83,15 @@ async def on_ready():
     raidDestChannel = discordServer.get_channel(raidDestChannelId)
     if raidDestChannel is None:
         print('Could not locate Raid destination channel: [{}]'.format(raidDestChannelId))
+        quit(1)
+
+    try:
+        raidZones = []
+        for zoneData in zonesRaw:
+            zoneTokens = zoneData.split('|')
+            raidZones.append(RaidZone(discordServer.get_channel(zoneTokens[0].strip()), zoneTokens[1].strip(), zoneTokens[2].strip(), zoneTokens[3].strip()))
+    except Exception as e:
+        print('Could not initialize raid zones. Please check the config.')
         quit(1)
 
     botOnlyChannels = []
@@ -167,10 +178,8 @@ async def on_message(message):
 
                 imageContent = theEmbed['image']
                 result.set_image(url=imageContent['url'])
-                # result.image.height=imageContent['height']
-                # result.image.width=imageContent['width']
-                result.image.height=750
-                result.image.width=1250
+                result.image.height=imageContent['height']
+                result.image.width=imageContent['width']
                 result.image.proxy_url=imageContent['proxy_url']
 
                 thumbnailContent = theEmbed['thumbnail']
@@ -183,6 +192,12 @@ async def on_message(message):
 
             raidMessage = await client.send_message(raidDestChannel, embed=raid.embed)
             raid.add_message(raidMessage)
+
+            # Send the raids to any compatible raid zones.
+            for rz in raidZones:
+                if rz.isInRaidZone(raid):
+                    raidMessage = await client.send_message(rz.channel, embed=raid.embed)
+                    raid.add_message(raidMessage)
     else:
         # Covert the message to lowercase to make the commands case-insensitive.
         lowercaseMessge = message.content.lower()
