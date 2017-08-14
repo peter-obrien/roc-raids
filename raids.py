@@ -105,8 +105,8 @@ class RaidMap:
         self.raidIdSeed = 0
 
 class RaidZone:
-    def __init__(self,channel,lat,lon,raidus):
+    def __init__(self,channel,lat,lon,radius):
         self.channel = channel
         self.latitude = float(lat)
         self.longitude = float(lon)
-        self.raidus = float(raidus)
+        self.radius = float(radius)
