@@ -1,3 +1,4 @@
+from math import sin, cos, sqrt, atan2, radians
 from raider import RaidParticipant
 from datetime import datetime
 from errors import InputError
@@ -110,3 +111,21 @@ class RaidZone:
         self.latitude = float(lat)
         self.longitude = float(lon)
         self.radius = float(radius)
+
+    def isInRaidZone(self, raid):
+        earthRadius = 6373.0
+
+        centerLat = radians(self.latitude)
+        centerLon = radians(self.longitude)
+        gymLat = radians(raid.latitude)
+        gymLon = radians(raid.longitude)
+
+        dlon = gymLon - centerLon
+        dlat = gymLat - centerLat
+
+        a = sin(dlat / 2)**2 + cos(centerLat) * cos(gymLat) * sin(dlon / 2)**2
+        c = 2 * atan2(sqrt(a), sqrt(1 - a))
+
+        distance = earthRadius * c
+
+        return distance <= self.radius
