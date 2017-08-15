@@ -165,7 +165,9 @@ async def on_message(message):
             theEmbed = message.embeds[0]
 
             titleTokens = theEmbed['title'].split(' (')
-            pokemon = titleTokens[0]
+            pokemonAndRaidLevel = titleTokens[0].split(' on ')
+            pokemon = pokemonAndRaidLevel[1]
+            raidLevel = pokemonAndRaidLevel[0].lstrip('A lvl ')
             pokemonNumber = titleTokens[1].replace('#','').split(')')[0]
             gymName = titleTokens[2].replace(').','').rstrip()
 
@@ -178,7 +180,7 @@ async def on_message(message):
             latitude = float(coordTokens[0])
             longitude = float(coordTokens[1])
 
-            raid = raids.create_raid(pokemon, pokemonNumber, gymName, endTime, latitude, longitude)
+            raid = raids.create_raid(pokemon, pokemonNumber, raidLevel, gymName, endTime, latitude, longitude)
 
             if raid.id is None:
                 raid.id = raids.generate_raid_id()
