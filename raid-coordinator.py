@@ -89,7 +89,12 @@ async def on_ready():
         raidZones = []
         for zoneData in zonesRaw:
             zoneTokens = zoneData.split('|')
-            raidZones.append(RaidZone(discordServer.get_channel(zoneTokens[0].strip()), zoneTokens[1].strip(), zoneTokens[2].strip(), zoneTokens[3].strip()))
+            rz = RaidZone(discordServer.get_channel(zoneTokens[0].strip()), zoneTokens[1].strip(), zoneTokens[2].strip(), zoneTokens[3].strip())
+            raidZones.append(rz)
+            i = 4
+            while i < len(zoneTokens):
+                rz.targetPokemon.append(int(zoneTokens[i]))
+                i += 1
     except Exception as e:
         print('Could not initialize raid zones. Please check the config.')
         quit(1)
@@ -155,6 +160,7 @@ async def on_message(message):
 
             titleTokens = theEmbed['title'].split(' (')
             pokemon = titleTokens[0]
+            pokemonNumber = titleTokens[1].replace('#','').split(')')[0]
             gymName = titleTokens[2].replace(').','').rstrip()
 
             endTimeTokens = theEmbed['description'].split(' until ')[1].split(' (')[0].split(':')
@@ -166,7 +172,7 @@ async def on_message(message):
             latitude = float(coordTokens[0])
             longitude = float(coordTokens[1])
 
-            raid = raids.create_raid(pokemon, gymName, endTime, latitude, longitude)
+            raid = raids.create_raid(pokemon, pokemonNumber, gymName, endTime, latitude, longitude)
 
             if raid.id is None:
                 raid.id = raids.generate_raid_id()
@@ -195,7 +201,7 @@ async def on_message(message):
 
             # Send the raids to any compatible raid zones.
             for rz in raidZones:
-                if rz.isInRaidZone(raid):
+                if rz.isInRaidZone(raid) and rz.filterPokemon(raid.pokemonNumber):
                     raidMessage = await client.send_message(rz.channel, embed=raid.embed)
                     raid.add_message(raidMessage)
     else:
