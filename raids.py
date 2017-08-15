@@ -4,8 +4,9 @@ from datetime import datetime
 from errors import InputError
 
 class Raid:
-    def __init__(self, pokemon, gym, end, latitude, longitude):
+    def __init__(self, pokemon, pokemonNumber, gym, end, latitude, longitude):
         self.pokemon = pokemon
+        self.pokemonNumber = int(pokemonNumber)
         self.gym = gym
         self.end = end
         self.latitude = latitude
@@ -76,8 +77,8 @@ class RaidMap:
         self.raidIdSeed += 1
         return self.raidIdSeed
 
-    def create_raid(self, pokemon, gym, end, latitude, longitude):
-        raid = Raid(pokemon, gym, end, latitude, longitude)
+    def create_raid(self, pokemon, pokemonNumber, gym, end, latitude, longitude):
+        raid = Raid(pokemon, pokemonNumber, gym, end, latitude, longitude)
         # Check to see if this raid was already generated from a different channel
         raidHash = hash(raid)
         if raidHash in self.hashedRaids:
@@ -111,6 +112,7 @@ class RaidZone:
         self.latitude = float(lat)
         self.longitude = float(lon)
         self.radius = float(radius)
+        self.targetPokemon = []
 
     def isInRaidZone(self, raid):
         earthRadius = 6373.0
@@ -129,3 +131,9 @@ class RaidZone:
         distance = earthRadius * c
 
         return distance <= self.radius
+
+    def filterPokemon(self, pokemonNumber):
+        if len(self.targetPokemon) == 0:
+            return True
+        else:
+            return int(pokemonNumber) in self.targetPokemon
