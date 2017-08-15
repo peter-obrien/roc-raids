@@ -34,7 +34,10 @@ if not raidDestChannelId:
     print('raid_dest_channel_id is not set. Please update ' + propFilename)
     quit()
 
-test_message_id = config['DEFAULT']['test_message_id']
+try:
+    test_message_id = config['DEFAULT']['test_message_id']
+except Exception as e:
+    test_message_id = None
 
 client = discord.Client()
 raids = RaidMap()
@@ -109,7 +112,7 @@ async def on_ready():
 @client.event
 async def on_message(message):
 
-    if message.content.startswith('!go'):
+    if message.content.startswith('!go') and test_message_id is not None:
         message = await client.get_message(message.channel, test_message_id)
 
     if message.author.name == 'GymHuntrBot':
