@@ -44,6 +44,8 @@ raids = RaidMap()
 easternTz = timezone('US/Eastern')
 utcTz = timezone('UTC')
 timeFmt = '%m/%d %I:%M %p'
+resetDateTime = datetime.now(easternTz).replace(hour=0, minute=0, second=0, microsecond=0) + timedelta(hours=24)
+print('next reset time = {}'.format(str(resetDateTime)))
 googleDirectionsUrlBase='https://www.google.com/maps/dir/Current+Location/'
 embedColor = 0x408fd0
 not_read = discord.PermissionOverwrite(read_messages=False)
@@ -63,6 +65,7 @@ async def on_ready():
     global raidInputChannel
     global raidDestChannel
     global raidZones
+    global resetDateTime
     print('Logged in as')
     print(client.user.name)
     print(client.user.id)
@@ -351,14 +354,17 @@ async def on_message(message):
                     pass
 
 async def background_cleanup():
+    global resetDateTime
     await client.wait_until_ready()
     while not client.is_closed:
         # Delete expired raids
         expiredRaids = []
         currentTime = datetime.now(easternTz)
+        # Find expired raids
         for raid in raids.raids.values():
             if currentTime > raid.end:
                 expiredRaids.append(raid)
+        # Process expired raids
         for raid in expiredRaids:
             for message in raid.messages:
                 try:
@@ -371,6 +377,12 @@ async def background_cleanup():
                 except discord.errors.NotFound as e:
                     pass
             raids.remove_raid(raid)
+
+        # Check to see if the raid counter needs to be reset
+        if datetime.now(easternTz) > resetDateTime:
+            # Get the next reset time.
+            resetDateTime = datetime.now(easternTz).replace(hour=0, minute=0, second=0, microsecond=0) + timedelta(hours=24)
+            raids.clear_raids()
 
         await asyncio.sleep(60) # task runs every 60 seconds
 
