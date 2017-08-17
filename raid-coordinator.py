@@ -164,15 +164,18 @@ async def on_message(message):
         if len(message.embeds) > 0:
             theEmbed = message.embeds[0]
 
-            titleTokens = theEmbed['title'].split(') at (')
-            pokemonAndRaidLevel = titleTokens[0].split(') against ')
-            pokemonAnNumberTokens = pokemonAndRaidLevel[1].split('(#')
-            raidLevel = pokemonAndRaidLevel[0].lstrip('(lvl')
-            pokemon = pokemonAnNumberTokens[0]
-            pokemonNumber = pokemonAnNumberTokens[1]
-            gymName = titleTokens[1].replace(').','').rstrip()
+            body = theEmbed['description'].split('}{')
+            attributes = dict()
+            for token in body:
+                keyAndValue = token.split('::')
+                attributes[keyAndValue[0].upper()] = keyAndValue[1]
 
-            endTimeTokens = theEmbed['description'].split(' until ')[1].split(' (')[0].split(':')
+            pokemon = attributes['POKEMON']
+            pokemonNumber = attributes['POKEMON#']
+            raidLevel = attributes['RAIDLEVEL']
+            gymName = attributes['GYMNAME']
+            endTimeTokens = attributes['TIME'].split(':')
+
             now = datetime.now(easternTz)
             endTime = now.replace(hour=int(endTimeTokens[0]), minute=int(endTimeTokens[1]), second=0)
 
