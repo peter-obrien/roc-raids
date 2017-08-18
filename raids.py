@@ -79,7 +79,7 @@ class RaidMap:
         return self.raidIdSeed
 
     def create_raid(self, pokemon, pokemonNumber, raidLevel, gym, end, latitude, longitude):
-        raid = Raid(pokemon, raidLevel, pokemonNumber, gym, end, latitude, longitude)
+        raid = Raid(pokemon, pokemonNumber, raidLevel, gym, end, latitude, longitude)
         # Check to see if this raid was already generated from a different channel
         raidHash = hash(raid)
         if raidHash in self.hashedRaids:
