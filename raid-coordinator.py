@@ -214,8 +214,12 @@ async def on_message(message):
             # Send the raids to any compatible raid zones.
             for rz in raidZones:
                 if rz.isInRaidZone(raid) and rz.filterPokemon(raid.pokemonNumber):
-                    raidMessage = await client.send_message(rz.channel, embed=raid.embed)
-                    raid.add_message(raidMessage)
+                    try:
+                        raidMessage = await client.send_message(rz.channel, embed=raid.embed)
+                        raid.add_message(raidMessage)
+                    except discord.errors.Forbidden:
+                        print('Unable to send raid to channel {}. The bot does not have permission.'.format(rz.channel.name))
+                        pass
     else:
         # Covert the message to lowercase to make the commands case-insensitive.
         lowercaseMessge = message.content.lower()
@@ -240,12 +244,12 @@ async def on_message(message):
             raidId = commandDetails[0]
             party_size = '1'
             notes = None
+            author = message.author
             if len(commandDetails) > 1:
                 party_size = commandDetails[1]
             if len(commandDetails) > 2:
                 notes = ' '.join(str(x) for x in commandDetails[2:])
             try:
-                author = message.author
                 # If the message is coming from PM we want to use the server's version of the user.
                 if message.channel.is_private:
                     author = discordServer.get_member(message.author.id)
@@ -285,8 +289,8 @@ async def on_message(message):
 
         elif lowercaseMessge.startswith('!leave '):
             raidId = message.content[7:]
+            author = message.author
             try:
-                author = message.author
                 # If the message is coming from PM we want to use the server's version of the user.
                 if message.channel.is_private:
                     author = discordServer.get_member(message.author.id)
