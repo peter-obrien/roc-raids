@@ -1,3 +1,7 @@
+import os, django
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "settings")
+django.setup()
+
 import discord
 import asyncio
 import sys

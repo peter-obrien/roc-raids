@@ -7,7 +7,11 @@ This bot uses [discord.py](https://github.com/Rapptz/discord.py) as such require
 Other libraries used are:
 ```
 pip install -U pytz
+pip install -U Django
+pip install -U psycopg2
 ```
+The bot also requires a [PostgreSQL](https://www.postgresql.org/) database.
+
 After the dependencies are loaded. The application needs to be configured.
 
 Please run `python setup.py` to create a properties.ini file that needs to be populated in order for the bot to run.
