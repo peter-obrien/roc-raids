@@ -45,7 +45,6 @@ easternTz = timezone('US/Eastern')
 utcTz = timezone('UTC')
 timeFmt = '%m/%d %I:%M %p'
 resetDateTime = datetime.now(easternTz).replace(hour=0, minute=0, second=0, microsecond=0) + timedelta(hours=24)
-print('next reset time = {}'.format(str(resetDateTime)))
 googleDirectionsUrlBase='https://www.google.com/maps/dir/Current+Location/'
 embedColor = 0x408fd0
 not_read = discord.PermissionOverwrite(read_messages=False)
@@ -95,7 +94,10 @@ async def on_ready():
         raidZones = []
         for zoneData in zonesRaw:
             zoneTokens = zoneData.split('|')
-            rz = RaidZone(discordServer.get_channel(zoneTokens[0].strip()), zoneTokens[1].strip(), zoneTokens[2].strip(), zoneTokens[3].strip())
+            channel = discordServer.get_channel(zoneTokens[0].strip())
+            if channel is None:
+                channel = discordServer.get_member(zoneTokens[0].strip())
+            rz = RaidZone(channel, zoneTokens[1].strip(), zoneTokens[2].strip(), zoneTokens[3].strip())
             raidZones.append(rz)
             i = 4
             while i < len(zoneTokens):
@@ -175,6 +177,8 @@ async def on_message(message):
             raidLevel = attributes['RAIDLEVEL']
             gymName = attributes['GYMNAME']
             endTimeTokens = attributes['TIME'].split(':')
+            quick_move = attributes['QUICKMOVE']
+            charge_move = attributes['CHARGEMOVE']
 
             now = datetime.now(easternTz)
             endTime = now.replace(hour=int(endTimeTokens[0]), minute=int(endTimeTokens[1]), second=0)
@@ -190,7 +194,7 @@ async def on_message(message):
                 raid.id = raids.generate_raid_id()
                 raids.store_raid(raid)
 
-                desc = gymName + '\n' + '*Ends: ' + endTime.strftime(timeFmt) + '*'
+                desc = '{}\n\n**Moves:** {}/{}\n**Ends:** *{}*'.format(gymName, quick_move, charge_move, endTime.strftime(timeFmt))
 
                 result = discord.Embed(title=pokemon + ': Raid #' + str(raid.id), url=theEmbed['url'], description=desc, colour=embedColor)
 
@@ -216,7 +220,8 @@ async def on_message(message):
                 if rz.isInRaidZone(raid) and rz.filterPokemon(raid.pokemonNumber):
                     try:
                         raidMessage = await client.send_message(rz.channel, embed=raid.embed)
-                        raid.add_message(raidMessage)
+                        if not isinstance(rz.channel, discord.member.Member):
+                            raid.add_message(raidMessage)
                     except discord.errors.Forbidden:
                         print('Unable to send raid to channel {}. The bot does not have permission.'.format(rz.channel.name))
                         pass
