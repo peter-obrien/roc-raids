@@ -4,6 +4,7 @@ from orm.models import Raid, RaidParticipant, RaidMessage
 from errors import InputError
 import discord
 from django.utils.timezone import localtime
+from django.db.models import Max
 
 time_format = '%m/%d %I:%M %p'
 embed_color = 0x408fd0
@@ -20,13 +21,18 @@ class RaidManager:
         self.raid_seed = 0
 
     async def load_from_database(self, discordClient, discordServer):
+
+        last_raid_seed = Raid.objects.filter(active=True).aggregate(Max('display_id')).get('display_id__max')
+        if last_raid_seed is not None:
+            self.raid_seed = last_raid_seed
+        print(self.raid_seed)
+
         for raid in Raid.objects.filter(active=True):
             self.hashed_active_raids[hash(raid)] = raid
             self.raid_map[raid.display_id] = raid
             self.channel_map[raid.display_id] = discordServer.get_channel(raid.private_channel)
             self.message_map[raid.display_id] = []
             self.participant_map[raid.display_id] = set()
-            self.raid_seed = max(self.raid_seed, raid.display_id)
             self.embed_map[raid.display_id] = await self.build_raid_embed(raid)
             for participant in RaidParticipant.objects.filter(raid=raid, attending=True):
                 self.participant_map[raid.display_id].add(participant)
