@@ -11,7 +11,7 @@ from datetime import datetime, timedelta
 from decimal import *
 from pytz import timezone
 from django.db import transaction
-from orm.models import RaidMessage
+from orm.models import RaidMessage, BotOnlyChannel
 from raids import RaidManager, RaidZone
 from errors import InputError
 
@@ -21,7 +21,6 @@ config.read(propFilename)
 serverId = config['DEFAULT']['server_id']
 rsvpChannelId = config['DEFAULT']['rsvp_channel_id']
 botToken = config['DEFAULT']['bot_token']
-botOnlyChannelIds = config['DEFAULT']['bot_only_channels']
 raidSourceChannelId = config['DEFAULT']['raid_src_channel_id']
 raidDestChannelId = config['DEFAULT']['raid_dest_channel_id']
 zonesRaw = config['DEFAULT']['zones'].split(',')
@@ -119,9 +118,8 @@ async def on_ready():
         quit(1)
 
     botOnlyChannels = []
-    tokens = botOnlyChannelIds.split(',')
-    for token in tokens:
-        channel = discordServer.get_channel(token.strip())
+    for boc in BotOnlyChannel.objects.all():
+        channel = discordServer.get_channel(boc.channel)
         if channel is not None:
             botOnlyChannels.append(channel)
 
@@ -407,12 +405,33 @@ async def on_message(message):
                     except discord.errors.NotFound as e:
                         pass
         elif lowercase_message.startswith('!'):
-            await client.send_message(message.author, embed=helpMessage)
-            if not message.channel.is_private:
-                try:
+            # Look up if the user is an Administrator
+            is_admin = message.channel.permissions_for(message.author).administrator
+            if is_admin:
+                if lowercase_message.startswith('!botonly ') and not message.channel.is_private:
+                    toggle_value = message.content[9:]
+                    if toggle_value == 'on':
+                        if message.channel not in botOnlyChannels:
+                            boc = BotOnlyChannel(channel=message.channel.id)
+                            boc.save()
+                            botOnlyChannels.append(message.channel)
+                            await client.send_message(message.channel, 'Bot only commands enabled.')
+                    elif toggle_value == 'off':
+                        if message.channel in botOnlyChannels:
+                            boc = BotOnlyChannel.objects.get(channel=message.channel.id)
+                            boc.delete()
+                            botOnlyChannels.remove(message.channel)
+                            await client.send_message(message.channel, 'Bot only commands disabled.')
+                    else:
+                        await client.send_message(message.author, 'Command to change bot only status:\n\n`!botonly [on/off]`')
                     await client.delete_message(message)
-                except discord.errors.NotFound as e:
-                    pass
+            else:
+                await client.send_message(message.author, embed=helpMessage)
+                if not message.channel.is_private:
+                    try:
+                        await client.delete_message(message)
+                    except discord.errors.NotFound:
+                        pass
         elif message.channel in botOnlyChannels:
             if not message.author.bot:
                 await client.send_message(message.author, 'Only bot commands may be used in this channel.')
