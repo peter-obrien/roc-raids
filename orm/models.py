@@ -56,3 +56,7 @@ class RaidParticipant(models.Model):
         if self.notes is not None:
             result += ': ' + self.notes
         return result
+
+
+class BotOnlyChannel(models.Model):
+    channel = models.CharField(max_length=64)
