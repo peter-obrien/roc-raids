@@ -25,7 +25,6 @@ class RaidManager:
         last_raid_seed = Raid.objects.filter(active=True).aggregate(Max('display_id')).get('display_id__max')
         if last_raid_seed is not None:
             self.raid_seed = last_raid_seed
-        print(self.raid_seed)
 
         for raid in Raid.objects.filter(active=True):
             self.hashed_active_raids[hash(raid)] = raid
