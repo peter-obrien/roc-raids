@@ -479,6 +479,15 @@ async def on_message(message):
                                                       user_pokemon_list))
                         pass
                     await client.delete_message(message)
+                elif lowercase_message == '!info':
+                    if message.channel.id in raid_zones.zones:
+                        rz = raid_zones.zones[message.channel.id]
+                        output = 'Here is the raid zone configuration for this channel:\n\nCoordinates: `{}, {}`\nRadius: `{}`\nPokemon: `{}`'.format(
+                            rz.latitude, rz.longitude, rz.radius, rz.filters['pokemon'])
+                        await client.send_message(message.channel, output)
+                    else:
+                        await client.send_message('This channel is not configured as a raid zone.')
+                    await client.delete_message(message)
                 else:
                     # TODO create admin specific help
                     await client.send_message(message.author, embed=helpMessage)
