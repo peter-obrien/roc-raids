@@ -524,6 +524,12 @@ async def send_to_raid_zones(raid, embed):
     return objects_to_save
 
 
+@client.event
+async def on_channel_delete(channel):
+    # If the channel was a raid zone, delete it.
+    if channel.id in raid_zones.zones:
+        raid_zones.zones[channel.id].delete()
+
 async def background_cleanup():
     global reset_date_time
     await client.wait_until_ready()
