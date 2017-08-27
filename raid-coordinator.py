@@ -320,15 +320,15 @@ async def on_message(message):
                     await client.send_message(rsvpChannel, resultTuple[1])
                     try:
                         await client.delete_message(message)
-                    except discord.errors.NotFound as e:
+                    except discord.errors.NotFound:
                         pass
             except InputError as err:
                 await client.send_message(author, err.message)
                 if not message.channel.is_private:
                     try:
                         await client.delete_message(message)
-                    except discord.errors.NotFound as e:
-                        pas
+                    except discord.errors.NotFound:
+                        pass
         elif lowercase_message.startswith('!leave '):
             user_raid_id = message.content[7:]
             author = message.author
@@ -529,6 +529,7 @@ async def on_channel_delete(channel):
     # If the channel was a raid zone, delete it.
     if channel.id in raid_zones.zones:
         raid_zones.zones[channel.id].delete()
+
 
 async def background_cleanup():
     global reset_date_time
