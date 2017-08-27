@@ -1,6 +1,6 @@
 from math import sin, cos, sqrt, atan2, radians
 
-from orm.models import Raid, RaidParticipant, RaidMessage
+from orm.models import Raid, RaidParticipant, RaidMessage, RaidZone
 from errors import InputError
 import discord
 from django.utils.timezone import localtime
@@ -175,34 +175,24 @@ class RaidManager:
         self.raid_seed = 1
 
 
-class RaidZone:
-    def __init__(self, channel, lat, lon, radius):
-        self.channel = channel
-        self.latitude = float(lat)
-        self.longitude = float(lon)
-        self.radius = float(radius)
-        self.target_pokemon = []
+class RaidZoneManager:
+    def __init__(self):
+        self.zones = dict()
 
-    def isInRaidZone(self, raid):
-        earth_radius = 6373.0
+    def create_zone(self, destination, latitude, longitude):
+        rz = RaidZone(destination=destination, latitude=latitude, longitude=longitude)
+        rz.save()
+        self.zones[destination] = rz
+        return rz
 
-        center_lat = radians(self.latitude)
-        center_lon = radians(self.longitude)
-        gym_lat = radians(raid.latitude)
-        gym_lon = radians(raid.longitude)
+    async def load_from_database(self, discordServer):
+        for rz in RaidZone.objects.all():
+            channel = discordServer.get_channel(rz.destination)
+            if channel is None:
+                channel = discordServer.get_member(rz.destination)
+            if channel is not None:
+                rz.discord_destination = channel
+                self.zones[rz.destination] = rz
+            else:
+                print('Unable to load raid zone for id {} destination {}'.format(rz.id, rz.destination))
 
-        lon_diff = gym_lon - center_lon
-        lat_diff = gym_lat - center_lat
-
-        a = sin(lat_diff / 2) ** 2 + cos(center_lat) * cos(gym_lat) * sin(lon_diff / 2) ** 2
-        c = 2 * atan2(sqrt(a), sqrt(1 - a))
-
-        distance = earth_radius * c
-
-        return distance <= self.radius
-
-    def filterPokemon(self, pokemon_number):
-        if len(self.target_pokemon) == 0:
-            return True
-        else:
-            return int(pokemon_number) in self.target_pokemon
