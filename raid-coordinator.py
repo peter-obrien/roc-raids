@@ -486,7 +486,7 @@ async def on_message(message):
                             rz.latitude, rz.longitude, rz.radius, rz.filters['pokemon'])
                         await client.send_message(message.channel, output)
                     else:
-                        await client.send_message('This channel is not configured as a raid zone.')
+                        await client.send_message(message.channel, 'This channel is not configured as a raid zone.')
                     await client.delete_message(message)
                 else:
                     # TODO create admin specific help
