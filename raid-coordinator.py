@@ -12,7 +12,7 @@ from decimal import *
 from pytz import timezone
 from django.db import transaction
 from orm.models import RaidMessage, BotOnlyChannel
-from raids import RaidManager, RaidZone
+from raids import RaidManager, RaidZoneManager
 from errors import InputError
 
 propFilename = 'properties.ini'
@@ -23,7 +23,6 @@ rsvpChannelId = config['DEFAULT']['rsvp_channel_id']
 botToken = config['DEFAULT']['bot_token']
 raidSourceChannelId = config['DEFAULT']['raid_src_channel_id']
 raidDestChannelId = config['DEFAULT']['raid_dest_channel_id']
-zonesRaw = config['DEFAULT']['zones'].split(',')
 if not serverId:
     print('server_id is not set. Please update ' + propFilename)
     quit()
@@ -47,6 +46,7 @@ except Exception as e:
 
 client = discord.Client()
 raids = RaidManager()
+raid_zones = RaidZoneManager()
 easternTz = timezone('US/Eastern')
 utcTz = timezone('UTC')
 reset_date_time = datetime.now(easternTz).replace(hour=0, minute=0, second=0, microsecond=0) + timedelta(hours=24)
@@ -77,7 +77,6 @@ async def on_ready():
     global botOnlyChannels
     global raidInputChannel
     global raidDestChannel
-    global raidZones
     global reset_date_time
 
     discordServer = client.get_server(serverId)
@@ -100,22 +99,7 @@ async def on_ready():
         print('Could not locate Raid destination channel: [{}]'.format(raidDestChannelId))
         quit(1)
 
-    try:
-        raidZones = []
-        for zoneData in zonesRaw:
-            zoneTokens = zoneData.split('|')
-            channel = discordServer.get_channel(zoneTokens[0].strip())
-            if channel is None:
-                channel = discordServer.get_member(zoneTokens[0].strip())
-            rz = RaidZone(channel, zoneTokens[1].strip(), zoneTokens[2].strip(), zoneTokens[3].strip())
-            raidZones.append(rz)
-            i = 4
-            while i < len(zoneTokens):
-                rz.target_pokemon.append(int(zoneTokens[i]))
-                i += 1
-    except Exception as e:
-        print('Could not initialize raid zones. Please check the config.')
-        quit(1)
+    await raid_zones.load_from_database(discordServer)
 
     botOnlyChannels = []
     for boc in BotOnlyChannel.objects.all():
@@ -423,8 +407,81 @@ async def on_message(message):
                             botOnlyChannels.remove(message.channel)
                             await client.send_message(message.channel, 'Bot only commands disabled.')
                     else:
-                        await client.send_message(message.author, 'Command to change bot only status:\n\n`!botonly [on/off]`')
+                        await client.send_message(message.author,
+                                                  'Command to change bot only status:\n\n`!botonly [on/off]`')
                     await client.delete_message(message)
+                elif lowercase_message.startswith('!setup '):
+                    coordinates = message.content[7:]
+                    if coordinates.find(',') != -1:
+                        try:
+                            coord_tokens = coordinates.split(',')
+                            latitude = Decimal(coord_tokens[0].strip())
+                            longitude = Decimal(coord_tokens[1].strip())
+
+                            if message.channel.id in raid_zones.zones:
+                                rz = raid_zones.zones[message.channel.id]
+                                rz.latitude = latitude
+                                rz.longitude = longitude
+                                rz.save()
+                                await client.send_message(message.channel, 'Raid zone coordinates updated')
+                            else:
+                                rz = raid_zones.create_zone(message.channel.id, latitude, longitude)
+                                rz.discord_destination = message.channel
+                                await client.send_message(message.channel, 'Raid zone created')
+                        except Exception as e:
+                            print(e)
+                            await client.send_message(message.author,
+                                                      'There was an error handling your request.\n\n{}\n\nCommand to setup a raid zone:\n\n`!setup latitude, longitude`'.format(
+                                                          message.content))
+                    else:
+                        await client.send_message(message.author,
+                                                  'Command to setup a raid zone:\n\n`!setup latitude, longitude`')
+                    await client.delete_message(message)
+                elif lowercase_message.startswith('!radius '):
+                    user_radius = message.content[8:]
+                    try:
+                        radius = Decimal(user_radius)
+                        if message.channel.id in raid_zones.zones:
+                            rz = raid_zones.zones[message.channel.id]
+                            rz.radius = radius
+                            rz.save()
+                            await client.send_message(message.channel, 'Radius updated')
+                        else:
+                            await client.send_message(message.author,
+                                                      'Setup has not been run for this channel/user.\n`!setup latitude, longitude`')
+                    except decimal.InvalidOperation:
+                        await client.send_message(message.author, 'Invalid radius: {}'.format(user_radius))
+                        pass
+                    await client.delete_message(message)
+                elif lowercase_message.startswith('!filter '):
+                    user_pokemon_list = message.content[8:]
+                    try:
+                        if message.channel.id in raid_zones.zones:
+                            rz = raid_zones.zones[message.channel.id]
+                            new_pokemon_filter = []
+                            if user_pokemon_list.find(',') == -1:
+                                if '0' != user_pokemon_list:
+                                    new_pokemon_filter.append(int(user_pokemon_list))
+                            else:
+                                for pokemon_number in user_pokemon_list.split(','):
+                                    new_pokemon_filter.append(int(pokemon_number))
+                            rz.filters['pokemon'].clear()
+                            rz.filters['pokemon'] = new_pokemon_filter
+                            rz.save()
+                            await client.send_message(message.channel, 'Updated filter list')
+                        else:
+                            await client.send_message(message.author,
+                                                      'Setup has not been run for this channel/user.\n`!setup latitude, longitude`')
+                    except Exception as e:
+                        print(e)
+                        await client.send_message(message.author,
+                                                  'Unable to process filter. Please verify your input: {}'.format(
+                                                      user_pokemon_list))
+                        pass
+                    await client.delete_message(message)
+                else:
+                    # TODO create admin specific help
+                    await client.send_message(message.author, embed=helpMessage)
             else:
                 await client.send_message(message.author, embed=helpMessage)
                 if not message.channel.is_private:
@@ -443,17 +500,17 @@ async def on_message(message):
 
 async def send_to_raid_zones(raid, embed):
     objects_to_save = []
-    for rz in raidZones:
-        if rz.isInRaidZone(raid) and rz.filterPokemon(raid.pokemon_number):
+    for rz in raid_zones.zones.values():
+        if rz.filter(raid):
             try:
-                raid_message = await client.send_message(rz.channel, embed=embed)
-                if not isinstance(rz.channel, discord.member.Member):
+                raid_message = await client.send_message(rz.discord_destination, embed=embed)
+                if not isinstance(rz.discord_destination, discord.member.Member):
                     objects_to_save.append(
                         RaidMessage(raid=raid, channel=raid_message.channel.id, message=raid_message.id))
                     raids.message_map[raid.display_id].append(raid_message)
             except discord.errors.Forbidden:
                 print('Unable to send raid to channel {}. The bot does not have permission.'.format(
-                    rz.channel.name))
+                    rz.discord_destination.name))
                 pass
     return objects_to_save
 
