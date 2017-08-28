@@ -407,9 +407,9 @@ async def on_message(message):
                     except discord.errors.NotFound as e:
                         pass
         elif lowercase_message.startswith('!'):
-            # Look up if the user is an Administrator
-            is_admin = message.channel.permissions_for(message.author).administrator
-            if is_admin:
+            # Channel configuration commands
+            can_manage_channels = message.channel.permissions_for(message.author).manage_channels
+            if can_manage_channels:
                 if lowercase_message.startswith('!botonly ') and not message.channel.is_private:
                     toggle_value = message.content[9:]
                     if toggle_value == 'on':
