@@ -69,6 +69,24 @@ helpMessage.add_field(name="!who [raid id]",
                       value="Receive a PM from the bot with the details of who is attending the raid along with their party size and notes.",
                       inline=False)
 
+channelConfigMessage = discord.Embed(title="Channel Config Commands", description="Here are the available commands to configure channels.",
+                                     color=0xf0040b)
+channelConfigMessage.add_field(name="!setup latitude, longitude",
+                               value="Creates a raid zone with radius 5km. If used again replaces the coordinates.",
+                               inline=False)
+channelConfigMessage.add_field(name="!radius xxx.x",
+                               value="Changes the raid zone radius.",
+                               inline=False)
+channelConfigMessage.add_field(name="!filter pokemon_numbers",
+                               value="Allows for a comma separated list of pokemon numbers to enable filtering. E.g. `!filter 144,145,146`. Use `0` to clear the filter.",
+                               inline=False)
+channelConfigMessage.add_field(name="!info",
+                               value="Displays the configuration for the channel.",
+                               inline=False)
+channelConfigMessage.add_field(name="!botonly [on/off]",
+                               value="Toggles if this channel can only allow bot commands.",
+                               inline=False)
+
 
 @client.event
 async def on_ready():
@@ -407,7 +425,7 @@ async def on_message(message):
                             botOnlyChannels.remove(message.channel)
                             await client.send_message(message.channel, 'Bot only commands disabled.')
                     else:
-                        await client.send_message(message.author,
+                        await client.send_message(message.channel,
                                                   'Command to change bot only status:\n\n`!botonly [on/off]`')
                     await client.delete_message(message)
                 elif lowercase_message.startswith('!setup '):
@@ -430,12 +448,12 @@ async def on_message(message):
                                 await client.send_message(message.channel, 'Raid zone created')
                         except Exception as e:
                             print(e)
-                            await client.send_message(message.author,
-                                                      'There was an error handling your request.\n\n{}\n\nCommand to setup a raid zone:\n\n`!setup latitude, longitude`'.format(
+                            await client.send_message(message.channel, embed=channelConfigMessage,
+                                                      content='There was an error handling your request.\n\n`{}`'.format(
                                                           message.content))
                     else:
-                        await client.send_message(message.author,
-                                                  'Command to setup a raid zone:\n\n`!setup latitude, longitude`')
+                        await client.send_message(message.channel, content='Invalid command: `{}`'.format(message.content),
+                                                  embed=channelConfigMessage)
                     await client.delete_message(message)
                 elif lowercase_message.startswith('!radius '):
                     user_radius = message.content[8:]
@@ -447,12 +465,14 @@ async def on_message(message):
                             rz.save()
                             await client.send_message(message.channel, 'Radius updated')
                         else:
-                            await client.send_message(message.author,
-                                                      'Setup has not been run for this channel/user.\n`!setup latitude, longitude`')
-                    except decimal.InvalidOperation:
-                        await client.send_message(message.author, 'Invalid radius: {}'.format(user_radius))
+                            await client.send_message(message.channel,
+                                                      content='Setup has not been run for this channel.',
+                                                      embed=channelConfigMessage)
+                    except InvalidOperation:
+                        await client.send_message(message.channel, 'Invalid radius: {}'.format(user_radius))
                         pass
-                    await client.delete_message(message)
+                    finally:
+                        await client.delete_message(message)
                 elif lowercase_message.startswith('!filter '):
                     user_pokemon_list = message.content[8:]
                     try:
@@ -470,11 +490,12 @@ async def on_message(message):
                             rz.save()
                             await client.send_message(message.channel, 'Updated filter list')
                         else:
-                            await client.send_message(message.author,
-                                                      'Setup has not been run for this channel/user.\n`!setup latitude, longitude`')
+                            await client.send_message(message.channel, embed=channelConfigMessage,
+                                                      content='Setup has not been run for this channel.')
                     except Exception as e:
+                        print('Unable to process: {}'.format(message.content))
                         print(e)
-                        await client.send_message(message.author,
+                        await client.send_message(message.channel,
                                                   'Unable to process filter. Please verify your input: {}'.format(
                                                       user_pokemon_list))
                         pass
@@ -490,7 +511,7 @@ async def on_message(message):
                     await client.delete_message(message)
                 else:
                     # TODO create admin specific help
-                    await client.send_message(message.author, embed=helpMessage)
+                    await client.send_message(message.author, embed=channelConfigMessage)
             else:
                 await client.send_message(message.author, embed=helpMessage)
                 if not message.channel.is_private:
