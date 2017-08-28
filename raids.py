@@ -114,7 +114,7 @@ class RaidManager:
     def remove_participant(self, raid, user_id, user_name):
         temp_raider = RaidParticipant(raid=raid, user_id=user_id)
         if temp_raider in self.participant_map[raid.display_id]:
-            temp_raider = RaidParticipant.objects.get(raid=raid, user_id=user_id)
+            temp_raider = RaidParticipant.objects.get(raid=raid, user_id=user_id, attending=True)
             temp_raider.attending = False
             temp_raider.save()
 
