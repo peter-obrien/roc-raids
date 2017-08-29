@@ -102,3 +102,6 @@ ENV/
 
 # Runtime properties
 properties.ini
+
+# JetBrains project files
+.idea
