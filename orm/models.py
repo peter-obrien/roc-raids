@@ -80,6 +80,13 @@ class RaidZone(models.Model):
         # Since the destination field is the ID of the discord channel/user, this attribute will hold the full object.
         self.discord_destination = None
 
+    @property
+    def status(self):
+        if self.active:
+            return 'on'
+        else:
+            return 'off'
+
     def filter(self, raid):
         if self.active:
             if self._isInRaidZone(raid):

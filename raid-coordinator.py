@@ -69,7 +69,8 @@ helpMessage.add_field(name="!who [raid id]",
                       value="Receive a PM from the bot with the details of who is attending the raid along with their party size and notes.",
                       inline=False)
 
-channelConfigMessage = discord.Embed(title="Channel Config Commands", description="Here are the available commands to configure channels.",
+channelConfigMessage = discord.Embed(title="Channel Config Commands",
+                                     description="Here are the available commands to configure channels.",
                                      color=0xf0040b)
 channelConfigMessage.add_field(name="!setup latitude, longitude",
                                value="Creates a raid zone with radius 5km. If used again replaces the coordinates.",
@@ -79,6 +80,9 @@ channelConfigMessage.add_field(name="!radius xxx.x",
                                inline=False)
 channelConfigMessage.add_field(name="!filter pokemon_numbers",
                                value="Allows for a comma separated list of pokemon numbers to enable filtering. E.g. `!filter 144,145,146`. Use `0` to clear the filter.",
+                               inline=False)
+channelConfigMessage.add_field(name="!raids [on/off]",
+                               value="Toggles if this raid zone is active or not.",
                                inline=False)
 channelConfigMessage.add_field(name="!info",
                                value="Displays the configuration for the channel.",
@@ -409,7 +413,7 @@ async def on_message(message):
                     except discord.errors.NotFound as e:
                         pass
         elif can_manage_channels and lowercase_message.startswith('!botonly ') and not message.channel.is_private:
-            toggle_value = message.content[9:]
+            toggle_value = lowercase_message[9:]
             if toggle_value == 'on':
                 if message.channel not in botOnlyChannels:
                     boc = BotOnlyChannel(channel=message.channel.id)
@@ -498,11 +502,32 @@ async def on_message(message):
                                               user_pokemon_list))
                 pass
             await client.delete_message(message)
+        elif can_manage_channels and lowercase_message.startswith('!raids '):
+            if message.channel.id in raid_zones.zones:
+                rz = raid_zones.zones[message.channel.id]
+                token = lowercase_message[7:]
+                try:
+                    if token == 'on':
+                        rz.active = True
+                        rz.save()
+                        await client.send_message(message.channel, 'Raid messages enabled.')
+                    elif token == 'off':
+                        rz.active = False
+                        rz.save()
+                        await client.send_message(message.channel, 'Raid messages disabled.')
+                    else:
+                        await client.send_message(message.channel, embed=channelConfigMessage,
+                                                  content='Unknown command: `{}`'.format(message.content))
+                finally:
+                    await client.delete_message(message)
+            else:
+                await client.send_message(message.channel, embed=channelConfigMessage,
+                                          content='Setup has not been run for this channel.')
         elif can_manage_channels and lowercase_message == '!info':
             if message.channel.id in raid_zones.zones:
                 rz = raid_zones.zones[message.channel.id]
-                output = 'Here is the raid zone configuration for this channel:\n\nCoordinates: `{}, {}`\nRadius: `{}`\nPokemon: `{}`'.format(
-                    rz.latitude, rz.longitude, rz.radius, rz.filters['pokemon'])
+                output = 'Here is the raid zone configuration for this channel:\n\nStatus: `{}`\nCoordinates: `{}, {}`\nRadius: `{}`\nPokemon: `{}`'.format(
+                    rz.status, rz.latitude, rz.longitude, rz.radius, rz.filters['pokemon'])
                 await client.send_message(message.channel, output)
             else:
                 await client.send_message(message.channel, 'This channel is not configured as a raid zone.')
