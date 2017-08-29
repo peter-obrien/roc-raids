@@ -1,140 +1,198 @@
 from math import sin, cos, sqrt, atan2, radians
-from raider import RaidParticipant
-from datetime import datetime
+
+from orm.models import Raid, RaidParticipant, RaidMessage, RaidZone
 from errors import InputError
+import discord
+from django.utils.timezone import localtime
+from django.db.models import Max
 
-class Raid:
-    def __init__(self, pokemon, pokemonNumber, raidLevel, gym, end, latitude, longitude):
-        self.pokemon = pokemon
-        self.pokemonNumber = int(pokemonNumber)
-        self.raidLevel = raidLevel
-        self.gym = gym
-        self.end = end
-        self.latitude = latitude
-        self.longitude = longitude
-        self.id = None
-        self.embed = None
-        self.raiders = set()
-        self.messages = []
-        self.channel = None
+time_format = '%m/%d %I:%M %p'
+embed_color = 0x408fd0
 
-    def add_raider(self, raiderName, partySize=1, notes=None):
-        if not partySize.isdigit() :
-            raise InputError("The party size entered [" + partySize + "] is not a number. If you're attending alone, please use 1." )
-        raider = RaidParticipant(raiderName, int(partySize), notes)
-        alreadyInRaid = raider in self.raiders
-        if alreadyInRaid:
-            self.raiders.remove(raider)
-        self.raiders.add(raider)
-        self.update_embed_participants()
-        partyDescriptor = (' +{} '.format(str(int(partySize)-1)) if int(partySize) > 1 else '')
-        if alreadyInRaid:
-            return (raider, "{} {}has __modified__ their RSVP to {} Raid #{} at {}".format(raiderName, partyDescriptor, self.pokemon, self.id, self.gym))
+
+class RaidManager:
+    def __init__(self):
+        self.hashed_active_raids = dict()
+        self.raid_map = dict()
+        self.message_map = dict()
+        self.participant_map = dict()
+        self.channel_map = dict()
+        self.embed_map = dict()
+        self.raid_seed = 0
+
+    async def load_from_database(self, discordClient, discordServer):
+
+        last_raid_seed = Raid.objects.filter(active=True).aggregate(Max('display_id')).get('display_id__max')
+        if last_raid_seed is not None:
+            self.raid_seed = last_raid_seed
+
+        for raid in Raid.objects.filter(active=True):
+            self.hashed_active_raids[hash(raid)] = raid
+            self.raid_map[raid.display_id] = raid
+            self.channel_map[raid.display_id] = discordServer.get_channel(raid.private_channel)
+            self.message_map[raid.display_id] = []
+            self.participant_map[raid.display_id] = set()
+            self.embed_map[raid.display_id] = await self.build_raid_embed(raid)
+            for participant in RaidParticipant.objects.filter(raid=raid, attending=True):
+                self.participant_map[raid.display_id].add(participant)
+            for rm in RaidMessage.objects.filter(raid=raid):
+                try:
+                    msg = await discordClient.get_message(discordServer.get_channel(rm.channel), rm.message)
+                    self.message_map[raid.display_id].append(msg)
+                except discord.errors.NotFound:
+                    pass
+
+    def create_raid(self, pokemon_name, pokemon_number, raid_level, gym_name, expiration, latitude, longitude):
+        raid_result = Raid(pokemon_name=pokemon_name, pokemon_number=pokemon_number, raid_level=raid_level,
+                           gym_name=gym_name, expiration=expiration, latitude=latitude, longitude=longitude)
+        hash_val = hash(raid_result)
+        if hash_val in self.hashed_active_raids:
+            raid_result = self.hashed_active_raids[hash_val]
+        return raid_result
+
+    def track_raid(self, raid):
+        self.raid_seed += 1
+        raid.display_id = self.raid_seed
+        self.hashed_active_raids[hash(raid)] = raid
+        self.raid_map[raid.display_id] = raid
+        self.message_map[raid.display_id] = []
+        self.participant_map[raid.display_id] = set()
+        raid.save()
+        return raid
+
+    def remove_raid(self, raid):
+        self.hashed_active_raids.pop(hash(raid), None)
+        self.raid_map.pop(raid.display_id, None)
+        self.message_map.pop(raid.display_id, None)
+        self.participant_map.pop(raid.display_id, None)
+        self.channel_map.pop(raid.display_id, None)
+        self.embed_map.pop(raid.display_id, None)
+
+    def get_raid(self, raid_id_str):
+        if not raid_id_str.isdigit():
+            raise InputError('Raid #{} does not exist.'.format(raid_id_str))
+
+        raid_id_int = int(raid_id_str)
+
+        if raid_id_int not in self.raid_map:
+            if raid_id_int <= self.raid_seed:
+                raise InputError('Raid #{} has expired.'.format(raid_id_str))
+            else:
+                raise InputError('Raid #{} does not exist.'.format(raid_id_str))
+        return self.raid_map[raid_id_int]
+
+    def add_participant(self, raid, user_id, user_name, party_size='1', notes=None):
+        if not party_size.isdigit():
+            raise InputError(
+                "The party size entered [{}] is not a number. If you're attending alone, please use 1.".format(
+                    party_size))
+        party_size = int(party_size)
+        participant = RaidParticipant(raid=raid, user_id=user_id, user_name=user_name, party_size=party_size,
+                                      notes=notes)
+        already_in_raid = participant in self.participant_map[raid.display_id]
+        if already_in_raid:
+            self.participant_map[raid.display_id].remove(participant)
+            participant = RaidParticipant.objects.get(raid=raid, user_id=user_id)
+            participant.party_size = party_size
+            participant.notes = notes
+        participant.save()
+        self.participant_map[raid.display_id].add(participant)
+
+        self.update_embed_participants(raid)
+        party_descriptor = (' +{} '.format(str(party_size - 1)) if party_size > 1 else '')
+        if already_in_raid:
+            return participant, "{} {}has __modified__ their RSVP to {} Raid #{} at {}".format(user_name,
+                                                                                               party_descriptor,
+                                                                                               raid.pokemon_name,
+                                                                                               raid.display_id,
+                                                                                               raid.gym_name)
         else:
-            return (raider, "{} {}has RSVP'd to {} Raid #{} at {}".format(raiderName, partyDescriptor, self.pokemon, self.id, self.gym))
+            return participant, "{} {}has RSVP'd to {} Raid #{} at {}".format(user_name, party_descriptor,
+                                                                              raid.pokemon_name,
+                                                                              raid.display_id, raid.gym_name)
 
-    def remove_raider(self, raiderName):
-        tempRaider = RaidParticipant(raiderName)
-        if tempRaider in self.raiders:
-            self.raiders.discard(tempRaider)
-            self.update_embed_participants()
-            return '{} is no longer attending Raid #{}'.format(raiderName, self.id)
+    def remove_participant(self, raid, user_id, user_name):
+        temp_raider = RaidParticipant(raid=raid, user_id=user_id)
+        if temp_raider in self.participant_map[raid.display_id]:
+            temp_raider = RaidParticipant.objects.get(raid=raid, user_id=user_id, attending=True)
+            temp_raider.attending = False
+            temp_raider.save()
+
+            self.participant_map[raid.display_id].remove(temp_raider)
+            self.update_embed_participants(raid)
+            return '{} is no longer attending Raid #{}'.format(user_name, raid.display_id)
         else:
             return None
 
-    def get_participant_number(self):
+    def update_embed_participants(self, raid):
+        self.embed_map[raid.display_id].set_footer(text='Participants: ' + str(self.get_participant_number(raid)))
+
+    def get_participant_number(self, raid):
         result = 0
-        for raider in self.raiders:
-            result += raider.party_size
+        for participant in self.participant_map[raid.display_id]:
+            result += participant.party_size
         return result
 
-    def update_embed_participants(self):
-        self.embed.set_footer(text='Participants: ' + str(self.get_participant_number()))
-
-    def get_raiders(self):
-        result = 'Here are the ' + str(self.get_participant_number()) + ' participants for Raid #' + str(self.id) + ':'
-        for raider in self.raiders:
+    def get_participant_printout(self, raid):
+        result = 'Here are the ' + str(self.get_participant_number(raid)) + ' participants for Raid #' + str(
+            raid.display_id) + ':'
+        for raider in self.participant_map[raid.display_id]:
             result += '\n\t' + str(raider)
         return result
 
-    def add_message(self, message):
-        self.messages.append(message)
-
-    def __hash__(self):
-        return hash((self.pokemon, self.latitude, self.longitude))
-
-    def __eq__(self, other):
-        return (self.pokemon == other.pokemon
-            and self.latitude == other.latitude
-            and self.longitude == other.longitude)
-
-class RaidMap:
-    def __init__(self):
-        self.raids = dict()
-        self.hashedRaids = dict()
-        self.raidIdSeed = 0
-
-    def generate_raid_id(self):
-        self.raidIdSeed += 1
-        return self.raidIdSeed
-
-    def create_raid(self, pokemon, pokemonNumber, raidLevel, gym, end, latitude, longitude):
-        raid = Raid(pokemon, pokemonNumber, raidLevel, gym, end, latitude, longitude)
-        # Check to see if this raid was already generated from a different channel
-        raidHash = hash(raid)
-        if raidHash in self.hashedRaids:
-            return self.hashedRaids[raidHash]
-        return raid
-
-    def store_raid(self, raid):
-        self.raids[str(raid.id)] = raid
-        self.hashedRaids[hash(raid)] = raid
-
-    def get_raid(self, raidId):
-        if str(raidId) not in self.raids:
-            if raidId.isdigit() and int(raidId) <= self.raidIdSeed:
-                raise InputError('Raid #' + str(raidId) + ' has expired.' )
-            else:
-                raise InputError('Raid #' + str(raidId) + ' does not exist.' )
-        return self.raids[str(raidId)]
-
-    def remove_raid(self, raid):
-        self.raids.pop(str(raid.id), None)
-        self.hashedRaids.pop(hash(raid), None)
-
-    def clear_raids(self):
-        self.raids.clear()
-        self.hashedRaids.clear()
-        self.raidIdSeed = 0
-
-class RaidZone:
-    def __init__(self,channel,lat,lon,radius):
-        self.channel = channel
-        self.latitude = float(lat)
-        self.longitude = float(lon)
-        self.radius = float(radius)
-        self.targetPokemon = []
-
-    def isInRaidZone(self, raid):
-        earthRadius = 6373.0
-
-        centerLat = radians(self.latitude)
-        centerLon = radians(self.longitude)
-        gymLat = radians(raid.latitude)
-        gymLon = radians(raid.longitude)
-
-        dlon = gymLon - centerLon
-        dlat = gymLat - centerLat
-
-        a = sin(dlat / 2)**2 + cos(centerLat) * cos(gymLat) * sin(dlon / 2)**2
-        c = 2 * atan2(sqrt(a), sqrt(1 - a))
-
-        distance = earthRadius * c
-
-        return distance <= self.radius
-
-    def filterPokemon(self, pokemonNumber):
-        if len(self.targetPokemon) == 0:
-            return True
+    async def build_raid_embed(self, raid):
+        if 'quick_move' in raid.data:
+            desc = '{}\n\n**Moves:** {}/{}\n**Ends:** *{}*'.format(raid.gym_name, raid.data['quick_move'],
+                                                                   raid.data['charge_move'],
+                                                                   localtime(raid.expiration).strftime(time_format))
         else:
-            return int(pokemonNumber) in self.targetPokemon
+            desc = '{}\n\n**Ends:** *{}*'.format(raid.gym_name, localtime(raid.expiration).strftime(time_format))
+
+        result = discord.Embed(title=raid.pokemon_name + ': Raid #' + str(raid.display_id), url=raid.data['url'],
+                               description=desc, colour=embed_color)
+
+        if 'image' in raid.data:
+            result.set_image(url=raid.data['image']['url'])
+            result.image.height = raid.data['image']['height']
+            result.image.width = raid.data['image']['width']
+            result.image.proxy_url = raid.data['image']['proxy_url']
+
+        if 'thumbnail' in raid.data:
+            result.set_thumbnail(url=raid.data['thumbnail']['url'])
+            result.thumbnail.height = raid.data['thumbnail']['height']
+            result.thumbnail.width = raid.data['thumbnail']['width']
+            result.thumbnail.proxy_url = raid.data['thumbnail']['proxy_url']
+
+        return result
+
+    def reset(self):
+        self.hashed_active_raids.clear()
+        self.raid_map.clear()
+        self.message_map.clear()
+        self.participant_map.clear()
+        self.channel_map.clear()
+        self.embed_map.clear()
+        self.raid_seed = 1
+
+
+class RaidZoneManager:
+    def __init__(self):
+        self.zones = dict()
+
+    def create_zone(self, destination, latitude, longitude):
+        rz = RaidZone(destination=destination, latitude=latitude, longitude=longitude)
+        rz.save()
+        self.zones[destination] = rz
+        return rz
+
+    async def load_from_database(self, discordServer):
+        for rz in RaidZone.objects.all():
+            channel = discordServer.get_channel(rz.destination)
+            if channel is None:
+                channel = discordServer.get_member(rz.destination)
+            if channel is not None:
+                rz.discord_destination = channel
+                self.zones[rz.destination] = rz
+            else:
+                print('Unable to load raid zone for id {} destination {}'.format(rz.id, rz.destination))
+

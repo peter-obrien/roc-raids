@@ -1,11 +1,18 @@
+import os, django
+
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "settings")
+django.setup()
+
 import discord
 import asyncio
-import sys
 import configparser
+from django.utils.timezone import make_aware, localtime
 from datetime import datetime, timedelta
+from decimal import *
 from pytz import timezone
-import pytz
-from raids import RaidMap, Raid, RaidZone
+from django.db import transaction
+from orm.models import RaidMessage, BotOnlyChannel
+from raids import RaidManager, RaidZoneManager
 from errors import InputError
 
 propFilename = 'properties.ini'
@@ -14,10 +21,8 @@ config.read(propFilename)
 serverId = config['DEFAULT']['server_id']
 rsvpChannelId = config['DEFAULT']['rsvp_channel_id']
 botToken = config['DEFAULT']['bot_token']
-botOnlyChannelIds = config['DEFAULT']['bot_only_channels']
 raidSourceChannelId = config['DEFAULT']['raid_src_channel_id']
 raidDestChannelId = config['DEFAULT']['raid_dest_channel_id']
-zonesRaw = config['DEFAULT']['zones'].split(',')
 if not serverId:
     print('server_id is not set. Please update ' + propFilename)
     quit()
@@ -40,21 +45,52 @@ except Exception as e:
     test_message_id = None
 
 client = discord.Client()
-raids = RaidMap()
+raids = RaidManager()
+raid_zones = RaidZoneManager()
 easternTz = timezone('US/Eastern')
 utcTz = timezone('UTC')
-timeFmt = '%m/%d %I:%M %p'
-resetDateTime = datetime.now(easternTz).replace(hour=0, minute=0, second=0, microsecond=0) + timedelta(hours=24)
-googleDirectionsUrlBase='https://www.google.com/maps/dir/Current+Location/'
-embedColor = 0x408fd0
+reset_date_time = datetime.now(easternTz).replace(hour=0, minute=0, second=0, microsecond=0) + timedelta(hours=24)
+googleDirectionsUrlBase = 'https://www.google.com/maps/?daddr='
 not_read = discord.PermissionOverwrite(read_messages=False)
 read = discord.PermissionOverwrite(read_messages=True)
 
-helpMessage=discord.Embed(title="Commands", description="Here are the commands that the roc-raids bot recognizes.", color=0xf0040b)
-helpMessage.add_field(name="!join [raid id] (party size) (notes/start time)", value="Use this command to signal to others that you wish to attend the raid. The message with the specified raid id will be updated to reflect your party's size. Can be used again to overwrite your previous party for the raid.", inline=False)
-helpMessage.add_field(name="!leave [raid id]", value="Can't make the raid you intended to join? Use this to take your party off the list.", inline=False)
-helpMessage.add_field(name="!raid [raid id]", value="Receive a PM from the bot with the raid summary. This contains the gym name, pokemon, raid end time and Google Maps location. Can also use !details [raid id]", inline=False)
-helpMessage.add_field(name="!who [raid id]", value="Receive a PM from the bot with the details of who is attending the raid along with their party size and notes.", inline=False)
+helpMessage = discord.Embed(title="Commands", description="Here are the commands that the roc-raids bot recognizes.",
+                            color=0xf0040b)
+helpMessage.add_field(name="!join [raid id] (party size) (notes/start time)",
+                      value="Use this command to signal to others that you wish to attend the raid. The message with the specified raid id will be updated to reflect your party's size. Can be used again to overwrite your previous party for the raid.",
+                      inline=False)
+helpMessage.add_field(name="!leave [raid id]",
+                      value="Can't make the raid you intended to join? Use this to take your party off the list.",
+                      inline=False)
+helpMessage.add_field(name="!raid [raid id]",
+                      value="Receive a PM from the bot with the raid summary. This contains the gym name, pokemon, raid end time and Google Maps location. Can also use !details [raid id]",
+                      inline=False)
+helpMessage.add_field(name="!who [raid id]",
+                      value="Receive a PM from the bot with the details of who is attending the raid along with their party size and notes.",
+                      inline=False)
+
+channelConfigMessage = discord.Embed(title="Channel Config Commands",
+                                     description="Here are the available commands to configure channels.",
+                                     color=0xf0040b)
+channelConfigMessage.add_field(name="!setup latitude, longitude",
+                               value="Creates a raid zone with radius 5km. If used again replaces the coordinates.",
+                               inline=False)
+channelConfigMessage.add_field(name="!radius xxx.x",
+                               value="Changes the raid zone radius.",
+                               inline=False)
+channelConfigMessage.add_field(name="!filter pokemon_numbers",
+                               value="Allows for a comma separated list of pokemon numbers to enable filtering. E.g. `!filter 144,145,146`. Use `0` to clear the filter.",
+                               inline=False)
+channelConfigMessage.add_field(name="!raids [on/off]",
+                               value="Toggles if this raid zone is active or not.",
+                               inline=False)
+channelConfigMessage.add_field(name="!info",
+                               value="Displays the configuration for the channel.",
+                               inline=False)
+channelConfigMessage.add_field(name="!botonly [on/off]",
+                               value="Toggles if this channel can only allow bot commands.",
+                               inline=False)
+
 
 @client.event
 async def on_ready():
@@ -63,12 +99,7 @@ async def on_ready():
     global botOnlyChannels
     global raidInputChannel
     global raidDestChannel
-    global raidZones
-    global resetDateTime
-    print('Logged in as')
-    print(client.user.name)
-    print(client.user.id)
-    print('------')
+    global reset_date_time
 
     discordServer = client.get_server(serverId)
     if discordServer is None:
@@ -82,7 +113,7 @@ async def on_ready():
 
     raidInputChannel = discordServer.get_channel(raidSourceChannelId)
     if raidInputChannel is None:
-        print('Could not locate Raid srouce channel: [{}]'.format(raidSourceChannelId))
+        print('Could not locate Raid source channel: [{}]'.format(raidSourceChannelId))
         quit(1)
 
     raidDestChannel = discordServer.get_channel(raidDestChannelId)
@@ -90,150 +121,170 @@ async def on_ready():
         print('Could not locate Raid destination channel: [{}]'.format(raidDestChannelId))
         quit(1)
 
-    try:
-        raidZones = []
-        for zoneData in zonesRaw:
-            zoneTokens = zoneData.split('|')
-            channel = discordServer.get_channel(zoneTokens[0].strip())
-            if channel is None:
-                channel = discordServer.get_member(zoneTokens[0].strip())
-            rz = RaidZone(channel, zoneTokens[1].strip(), zoneTokens[2].strip(), zoneTokens[3].strip())
-            raidZones.append(rz)
-            i = 4
-            while i < len(zoneTokens):
-                rz.targetPokemon.append(int(zoneTokens[i]))
-                i += 1
-    except Exception as e:
-        print('Could not initialize raid zones. Please check the config.')
-        quit(1)
+    await raid_zones.load_from_database(discordServer)
 
     botOnlyChannels = []
-    tokens = botOnlyChannelIds.split(',')
-    for token in tokens:
-        channel = discordServer.get_channel(token.strip())
+    for boc in BotOnlyChannel.objects.all():
+        channel = discordServer.get_channel(boc.channel)
         if channel is not None:
             botOnlyChannels.append(channel)
 
+    await raids.load_from_database(client, discordServer)
+
+    print('Logged in as')
+    print(client.user.name)
+    print(client.user.id)
+    print('------')
+
+
 @client.event
 async def on_message(message):
-
     if message.content.startswith('!go') and test_message_id is not None:
         message = await client.get_message(message.channel, test_message_id)
 
     if message.author.name == 'GymHuntrBot':
         if len(message.embeds) > 0:
-            gymLocation = message.embeds[0]['url'].split('#')[1]
-            gmapUrl = googleDirectionsUrlBase + gymLocation
-            coordTokens = gymLocation.split(',')
-            latitude = float(coordTokens[0])
-            longitude = float(coordTokens[1])
+            the_embed = message.embeds[0]
+            raid_level = int(the_embed['title'].split(' ')[1])
+            gym_location = the_embed['url'].split('#')[1]
+            google_maps_url = googleDirectionsUrlBase + gym_location
+            coord_tokens = gym_location.split(',')
+            latitude = Decimal(coord_tokens[0])
+            longitude = Decimal(coord_tokens[1])
 
-            descTokens = message.embeds[0]['description'].split('\n')
-            gymName = descTokens[0]
-            pokemon = descTokens[1]
+            desc_tokens = the_embed['description'].split('\n')
+            gym_name = desc_tokens[0].strip('*').rstrip('.')
+            pokemon_name = desc_tokens[1]
 
-            timeTokens = descTokens[3].split(' ')
-            secondsToEnd = int(timeTokens[6]) + (60 * int(timeTokens[4])) + (60 * 60 * int(timeTokens[2]))
-            endTime = message.timestamp + timedelta(seconds=secondsToEnd)
-            easternEndTime = endTime.replace(tzinfo=utcTz).astimezone(easternTz)
+            time_tokens = desc_tokens[3].split(' ')
+            seconds_to_end = int(time_tokens[6]) + (60 * int(time_tokens[4])) + (60 * 60 * int(time_tokens[2]))
+            end_time = message.timestamp + timedelta(seconds=seconds_to_end)
+            end_time = end_time.replace(second=0, microsecond=0, tzinfo=utcTz)
 
-            raid = raids.create_raid(pokemon, gymName, easternEndTime, latitude, longitude)
+            raid = raids.create_raid(pokemon_name, 0, raid_level, gym_name, end_time, latitude, longitude)
 
             if raid.id is None:
-                raid.id = raids.generate_raid_id()
-                raids.store_raid(raid)
+                data = dict()
 
-                desc = gymName + '\n' + '*Ends: ' + easternEndTime.strftime(timeFmt) + '*'
+                data['url'] = google_maps_url
 
-                result = discord.Embed(title=pokemon + ': Raid #' + str(raid.id), url=gmapUrl, description=desc, colour=embedColor)
+                thumbnail = dict()
+                thumbnail_content = the_embed['thumbnail']
+                thumbnail['url'] = thumbnail_content['url']
+                thumbnail['height'] = thumbnail_content['height']
+                thumbnail['width'] = thumbnail_content['width']
+                thumbnail['proxy_url'] = thumbnail_content['proxy_url']
+                data['thumbnail'] = thumbnail
 
-                thumbnailContent = message.embeds[0]['thumbnail']
-                result.set_thumbnail(url=thumbnailContent['url'])
-                result.thumbnail.height=thumbnailContent['height']
-                result.thumbnail.width=thumbnailContent['width']
-                result.thumbnail.proxy_url=thumbnailContent['proxy_url']
+                raid.data = data
 
-                raid.embed = result
+                raids.track_raid(raid)
 
-            raidMessage = await client.send_message(message.channel, embed=raid.embed)
-            raid.add_message(raidMessage)
-            if message.id != '341294312749006849':
+                result = await raids.build_raid_embed(raid)
+
+                raids.embed_map[raid.display_id] = result
+
+            raid_embed = raids.embed_map[raid.display_id]
+            raid_message = await client.send_message(raidDestChannel, embed=raid_embed)
+            objects_to_save = []
+            objects_to_save.append(RaidMessage(raid=raid, channel=raid_message.channel.id, message=raid_message.id))
+            raids.message_map[raid.display_id].append(raid_message)
+
+            # Send the raids to any compatible raid zones.
+            zone_messages = await send_to_raid_zones(raid, raid_embed)
+            objects_to_save.extend(zone_messages)
+
+            RaidMessage.objects.bulk_create(objects_to_save)
+
+            if message.id != test_message_id:
                 try:
                     await client.delete_message(message)
                 except discord.errors.NotFound as e:
                     pass
     elif message.channel == raidInputChannel:
         if len(message.embeds) > 0:
-            theEmbed = message.embeds[0]
+            the_embed = message.embeds[0]
 
-            body = theEmbed['description'].split('}{')
+            body = the_embed['description'].split('}{')
             attributes = dict()
             for token in body:
                 keyAndValue = token.split('::')
                 attributes[keyAndValue[0].upper()] = keyAndValue[1]
 
             pokemon = attributes['POKEMON']
-            pokemonNumber = attributes['POKEMON#']
-            raidLevel = attributes['RAIDLEVEL']
-            gymName = attributes['GYMNAME']
-            endTimeTokens = attributes['TIME'].split(':')
+            pokemon_number = attributes['POKEMON#']
+            raid_level = attributes['RAIDLEVEL']
+            gym_name = attributes['GYMNAME']
+            end_time_tokens = attributes['TIME'].split(':')
             quick_move = attributes['QUICKMOVE']
             charge_move = attributes['CHARGEMOVE']
 
-            now = datetime.now(easternTz)
-            endTime = now.replace(hour=int(endTimeTokens[0]), minute=int(endTimeTokens[1]), second=0)
+            end_time = make_aware(message.timestamp).replace(hour=int(end_time_tokens[0]),
+                                                             minute=int(end_time_tokens[1]),
+                                                             second=0,
+                                                             microsecond=0)
 
             # Get the coordinate of the gym so we can determine which zone(s) it belongs to
-            coordTokens = theEmbed['url'].split('=')[1].split(',')
-            latitude = float(coordTokens[0])
-            longitude = float(coordTokens[1])
+            coord_tokens = the_embed['url'].split('=')[1].split(',')
+            latitude = Decimal(coord_tokens[0])
+            longitude = Decimal(coord_tokens[1])
 
-            raid = raids.create_raid(pokemon, pokemonNumber, raidLevel, gymName, endTime, latitude, longitude)
+            raid = raids.create_raid(pokemon, pokemon_number, raid_level, gym_name, end_time, latitude, longitude)
 
             if raid.id is None:
-                raid.id = raids.generate_raid_id()
-                raids.store_raid(raid)
+                # Build the jsonb field contents
+                data = dict()
 
-                desc = '{}\n\n**Moves:** {}/{}\n**Ends:** *{}*'.format(gymName, quick_move, charge_move, endTime.strftime(timeFmt))
+                data['charge_move'] = charge_move
+                data['quick_move'] = quick_move
+                data['url'] = the_embed['url']
 
-                result = discord.Embed(title=pokemon + ': Raid #' + str(raid.id), url=theEmbed['url'], description=desc, colour=embedColor)
+                image = dict()
+                image_content = the_embed['image']
+                image['url'] = image_content['url']
+                image['height'] = image_content['height']
+                image['width'] = image_content['width']
+                image['proxy_url'] = image_content['proxy_url']
+                data['image'] = image
 
-                imageContent = theEmbed['image']
-                result.set_image(url=imageContent['url'])
-                result.image.height=imageContent['height']
-                result.image.width=imageContent['width']
-                result.image.proxy_url=imageContent['proxy_url']
+                thumbnail = dict()
+                thumbnail_content = the_embed['thumbnail']
+                thumbnail['url'] = thumbnail_content['url']
+                thumbnail['height'] = thumbnail_content['height']
+                thumbnail['width'] = thumbnail_content['width']
+                thumbnail['proxy_url'] = thumbnail_content['proxy_url']
+                data['thumbnail'] = thumbnail
 
-                thumbnailContent = theEmbed['thumbnail']
-                result.set_thumbnail(url=thumbnailContent['url'])
-                result.thumbnail.height=thumbnailContent['height']
-                result.thumbnail.width=thumbnailContent['width']
-                result.thumbnail.proxy_url=thumbnailContent['proxy_url']
+                raid.data = data
 
-                raid.embed = result
+                raids.track_raid(raid)
 
-            raidMessage = await client.send_message(raidDestChannel, embed=raid.embed)
-            raid.add_message(raidMessage)
+                result = await raids.build_raid_embed(raid)
+
+                raids.embed_map[raid.display_id] = result
+
+            raid_embed = raids.embed_map[raid.display_id]
+            raid_message = await client.send_message(raidDestChannel, embed=raid_embed)
+            objects_to_save = []
+            objects_to_save.append(RaidMessage(raid=raid, channel=raid_message.channel.id, message=raid_message.id))
+            raids.message_map[raid.display_id].append(raid_message)
 
             # Send the raids to any compatible raid zones.
-            for rz in raidZones:
-                if rz.isInRaidZone(raid) and rz.filterPokemon(raid.pokemonNumber):
-                    try:
-                        raidMessage = await client.send_message(rz.channel, embed=raid.embed)
-                        if not isinstance(rz.channel, discord.member.Member):
-                            raid.add_message(raidMessage)
-                    except discord.errors.Forbidden:
-                        print('Unable to send raid to channel {}. The bot does not have permission.'.format(rz.channel.name))
-                        pass
+            zone_messages = await send_to_raid_zones(raid, raid_embed)
+            objects_to_save.extend(zone_messages)
+
+            RaidMessage.objects.bulk_create(objects_to_save)
     else:
         # Covert the message to lowercase to make the commands case-insensitive.
-        lowercaseMessge = message.content.lower()
+        lowercase_message = message.content.lower()
+        # Used for channel configuration commands
+        can_manage_channels = message.channel.permissions_for(message.author).manage_channels
 
-        if lowercaseMessge.startswith('!who '):
-            raidId = message.content[5:]
+        if lowercase_message.startswith('!who '):
+            user_raid_id = message.content[5:]
             try:
-                raid = raids.get_raid(raidId)
-                msg = raid.get_raiders()
+                raid = raids.get_raid(user_raid_id)
+                msg = raids.get_participant_printout(raid)
                 await client.send_message(message.author, msg)
             except InputError as err:
                 await client.send_message(message.author, err.message)
@@ -241,96 +292,105 @@ async def on_message(message):
                 if not message.channel.is_private:
                     try:
                         await client.delete_message(message)
-                    except discord.errors.NotFound as e:
+                    except discord.errors.NotFound:
                         pass
-
-        elif lowercaseMessge.startswith('!join '):
-            commandDetails = message.content[6:].split(' ')
-            raidId = commandDetails[0]
+        elif lowercase_message.startswith('!join '):
+            command_details = message.content[6:].split(' ')
+            user_raid_id = command_details[0]
             party_size = '1'
             notes = None
             author = message.author
-            if len(commandDetails) > 1:
-                party_size = commandDetails[1]
-            if len(commandDetails) > 2:
-                notes = ' '.join(str(x) for x in commandDetails[2:])
+            if len(command_details) > 1:
+                party_size = command_details[1]
+            if len(command_details) > 2:
+                notes = ' '.join(str(x) for x in command_details[2:])
             try:
                 # If the message is coming from PM we want to use the server's version of the user.
                 if message.channel.is_private:
                     author = discordServer.get_member(message.author.id)
 
-                raid = raids.get_raid(raidId)
+                raid = raids.get_raid(user_raid_id)
 
-                if raid.channel is None:
-                    privateRaidChannel = await client.create_channel(discordServer, 'raid-{}-chat'.format(raid.id), (discordServer.default_role, not_read), (discordServer.me, read))
-                    raid.channel = privateRaidChannel
+                private_raid_channel = raids.channel_map.get(raid.display_id, None)
+                if private_raid_channel is None:
+                    private_raid_channel = await client.create_channel(discordServer,
+                                                                       'raid-{}-chat'.format(raid.display_id),
+                                                                       (discordServer.default_role, not_read),
+                                                                       (discordServer.me, read))
+                    raids.channel_map[raid.display_id] = private_raid_channel
+
                     # Send the raid card to the top of the channel.
-                    privateChannelRaidMessage = await client.send_message(raid.channel, embed=raid.embed)
-                    raid.add_message(privateChannelRaidMessage)
+                    private_raid_card = await client.send_message(private_raid_channel,
+                                                                  embed=raids.embed_map[raid.display_id])
+                    raids.message_map[raid.display_id].append(private_raid_card)
+
+                    with transaction.atomic():
+                        raid.private_channel = private_raid_channel.id
+                        raid.save()
+                        RaidMessage(raid=raid, channel=private_raid_channel.id, message=private_raid_card.id).save()
 
                 # Add this user to the raid and update all the embeds for the raid.
-                resultTuple = raid.add_raider(author.display_name, party_size, notes)
-                for msg in raid.messages:
-                    await client.edit_message(msg, embed=raid.embed)
+                resultTuple = raids.add_participant(raid, author.id, author.display_name, party_size, notes)
+                for msg in raids.message_map[raid.display_id]:
+                    await client.edit_message(msg, embed=raids.embed_map[raid.display_id])
 
                 # Add the user to the private channel for the raid
-                await client.edit_channel_permissions(raid.channel, author, read)
-                await client.send_message(raid.channel, '{}{}'.format(author.mention, resultTuple[0].details()))
+                await client.edit_channel_permissions(raids.channel_map[raid.display_id], author, read)
+                await client.send_message(raids.channel_map[raid.display_id],
+                                          '{}{}'.format(author.mention, resultTuple[0].details()))
 
                 # Send message to the RSVP channel
                 if not message.channel.is_private:
                     await client.send_message(rsvpChannel, resultTuple[1])
                     try:
                         await client.delete_message(message)
-                    except discord.errors.NotFound as e:
+                    except discord.errors.NotFound:
                         pass
             except InputError as err:
                 await client.send_message(author, err.message)
                 if not message.channel.is_private:
                     try:
                         await client.delete_message(message)
-                    except discord.errors.NotFound as e:
+                    except discord.errors.NotFound:
                         pass
-
-        elif lowercaseMessge.startswith('!leave '):
-            raidId = message.content[7:]
+        elif lowercase_message.startswith('!leave '):
+            user_raid_id = message.content[7:]
             author = message.author
             try:
                 # If the message is coming from PM we want to use the server's version of the user.
                 if message.channel.is_private:
                     author = discordServer.get_member(message.author.id)
 
-                raid = raids.get_raid(raidId)
-                displayMsg = raid.remove_raider(author.display_name)
-
+                raid = raids.get_raid(user_raid_id)
+                displayMsg = raids.remove_participant(raid, author.id, author.display_name)
 
                 if displayMsg is not None:
                     # Remove the user to the private channel for the raid
-                    await client.edit_channel_permissions(raid.channel, author, not_read)
-                    await client.send_message(raid.channel, '**{}** is no longer attending'.format(author.display_name))
+                    await client.edit_channel_permissions(raids.channel_map[raid.display_id], author, not_read)
+                    await client.send_message(raids.channel_map[raid.display_id],
+                                              '**{}** is no longer attending'.format(author.display_name))
 
-                    for msg in raid.messages:
-                        await client.edit_message(msg, embed=raid.embed)
+                    for msg in raids.message_map[raid.display_id]:
+                        await client.edit_message(msg, embed=raids.embed_map[raid.display_id])
                     if not message.channel.is_private:
                         await client.send_message(rsvpChannel, displayMsg)
                 if not message.channel.is_private:
                     try:
                         await client.delete_message(message)
-                    except discord.errors.NotFound as e:
+                    except discord.errors.NotFound:
                         pass
             except InputError as err:
                 await client.send_message(author, err.message)
                 if not message.channel.is_private:
                     try:
                         await client.delete_message(message)
-                    except discord.errors.NotFound as e:
+                    except discord.errors.NotFound:
                         pass
-
-        elif lowercaseMessge.startswith('!details '):
-            raidId = message.content[9:]
+        elif lowercase_message.startswith('!details '):
+            user_raid_id = message.content[9:]
             try:
-                raid = raids.get_raid(raidId)
-                await client.send_message(message.author, embed=raid.embed)
+                raid = raids.get_raid(user_raid_id)
+                await client.send_message(message.author, embed=raids.embed_map[raid.display_id])
             except InputError as err:
                 await client.send_message(message.author, err.message)
             finally:
@@ -339,12 +399,11 @@ async def on_message(message):
                         await client.delete_message(message)
                     except discord.errors.NotFound as e:
                         pass
-
-        elif lowercaseMessge.startswith('!raid '): # alias for !details
-            raidId = message.content[6:]
+        elif lowercase_message.startswith('!raid '):  # alias for !details
+            user_raid_id = message.content[6:]
             try:
-                raid = raids.get_raid(raidId)
-                await client.send_message(message.author, embed=raid.embed)
+                raid = raids.get_raid(user_raid_id)
+                await client.send_message(message.author, embed=raids.embed_map[raid.display_id])
             except InputError as err:
                 await client.send_message(message.author, err.message)
             finally:
@@ -353,12 +412,132 @@ async def on_message(message):
                         await client.delete_message(message)
                     except discord.errors.NotFound as e:
                         pass
-        elif lowercaseMessge.startswith('!'):
+        elif can_manage_channels and lowercase_message.startswith('!botonly ') and not message.channel.is_private:
+            toggle_value = lowercase_message[9:]
+            if toggle_value == 'on':
+                if message.channel not in botOnlyChannels:
+                    boc = BotOnlyChannel(channel=message.channel.id)
+                    boc.save()
+                    botOnlyChannels.append(message.channel)
+                    await client.send_message(message.channel, 'Bot only commands enabled.')
+            elif toggle_value == 'off':
+                if message.channel in botOnlyChannels:
+                    boc = BotOnlyChannel.objects.get(channel=message.channel.id)
+                    boc.delete()
+                    botOnlyChannels.remove(message.channel)
+                    await client.send_message(message.channel, 'Bot only commands disabled.')
+            else:
+                await client.send_message(message.channel,
+                                          'Command to change bot only status:\n\n`!botonly [on/off]`')
+            await client.delete_message(message)
+        elif can_manage_channels and lowercase_message.startswith('!setup '):
+            coordinates = message.content[7:]
+            if coordinates.find(',') != -1:
+                try:
+                    coord_tokens = coordinates.split(',')
+                    latitude = Decimal(coord_tokens[0].strip())
+                    longitude = Decimal(coord_tokens[1].strip())
+
+                    if message.channel.id in raid_zones.zones:
+                        rz = raid_zones.zones[message.channel.id]
+                        rz.latitude = latitude
+                        rz.longitude = longitude
+                        rz.save()
+                        await client.send_message(message.channel, 'Raid zone coordinates updated')
+                    else:
+                        rz = raid_zones.create_zone(message.channel.id, latitude, longitude)
+                        rz.discord_destination = message.channel
+                        await client.send_message(message.channel, 'Raid zone created')
+                except Exception as e:
+                    print(e)
+                    await client.send_message(message.channel, embed=channelConfigMessage,
+                                              content='There was an error handling your request.\n\n`{}`'.format(
+                                                  message.content))
+            else:
+                await client.send_message(message.channel, content='Invalid command: `{}`'.format(message.content),
+                                          embed=channelConfigMessage)
+            await client.delete_message(message)
+        elif can_manage_channels and lowercase_message.startswith('!radius '):
+            user_radius = message.content[8:]
+            try:
+                radius = Decimal(user_radius)
+                if message.channel.id in raid_zones.zones:
+                    rz = raid_zones.zones[message.channel.id]
+                    rz.radius = radius
+                    rz.save()
+                    await client.send_message(message.channel, 'Radius updated')
+                else:
+                    await client.send_message(message.channel,
+                                              content='Setup has not been run for this channel.',
+                                              embed=channelConfigMessage)
+            except InvalidOperation:
+                await client.send_message(message.channel, 'Invalid radius: {}'.format(user_radius))
+                pass
+            finally:
+                await client.delete_message(message)
+        elif can_manage_channels and lowercase_message.startswith('!filter '):
+            user_pokemon_list = message.content[8:]
+            try:
+                if message.channel.id in raid_zones.zones:
+                    rz = raid_zones.zones[message.channel.id]
+                    new_pokemon_filter = []
+                    if user_pokemon_list.find(',') == -1:
+                        if '0' != user_pokemon_list:
+                            new_pokemon_filter.append(int(user_pokemon_list))
+                    else:
+                        for pokemon_number in user_pokemon_list.split(','):
+                            new_pokemon_filter.append(int(pokemon_number))
+                    rz.filters['pokemon'].clear()
+                    rz.filters['pokemon'] = new_pokemon_filter
+                    rz.save()
+                    await client.send_message(message.channel, 'Updated filter list')
+                else:
+                    await client.send_message(message.channel, embed=channelConfigMessage,
+                                              content='Setup has not been run for this channel.')
+            except Exception as e:
+                print('Unable to process: {}'.format(message.content))
+                print(e)
+                await client.send_message(message.channel,
+                                          'Unable to process filter. Please verify your input: {}'.format(
+                                              user_pokemon_list))
+                pass
+            await client.delete_message(message)
+        elif can_manage_channels and lowercase_message.startswith('!raids '):
+            if message.channel.id in raid_zones.zones:
+                rz = raid_zones.zones[message.channel.id]
+                token = lowercase_message[7:]
+                try:
+                    if token == 'on':
+                        rz.active = True
+                        rz.save()
+                        await client.send_message(message.channel, 'Raid messages enabled.')
+                    elif token == 'off':
+                        rz.active = False
+                        rz.save()
+                        await client.send_message(message.channel, 'Raid messages disabled.')
+                    else:
+                        await client.send_message(message.channel, embed=channelConfigMessage,
+                                                  content='Unknown command: `{}`'.format(message.content))
+                finally:
+                    await client.delete_message(message)
+            else:
+                await client.send_message(message.channel, embed=channelConfigMessage,
+                                          content='Setup has not been run for this channel.')
+        elif can_manage_channels and lowercase_message == '!info':
+            if message.channel.id in raid_zones.zones:
+                rz = raid_zones.zones[message.channel.id]
+                output = 'Here is the raid zone configuration for this channel:\n\nStatus: `{}`\nCoordinates: `{}, {}`\nRadius: `{}`\nPokemon: `{}`'.format(
+                    rz.status, rz.latitude, rz.longitude, rz.radius, rz.filters['pokemon'])
+                await client.send_message(message.channel, output)
+            else:
+                await client.send_message(message.channel, 'This channel is not configured as a raid zone.')
+            await client.delete_message(message)
+        elif lowercase_message.startswith('!'):
             await client.send_message(message.author, embed=helpMessage)
             if not message.channel.is_private:
                 try:
                     await client.delete_message(message)
-                except discord.errors.NotFound as e:
+                except discord.errors.NotFound:
                     pass
         elif message.channel in botOnlyChannels:
             if not message.author.bot:
@@ -368,38 +547,68 @@ async def on_message(message):
                 except discord.errors.NotFound as e:
                     pass
 
+
+async def send_to_raid_zones(raid, embed):
+    objects_to_save = []
+    for rz in raid_zones.zones.values():
+        if rz.filter(raid):
+            try:
+                raid_message = await client.send_message(rz.discord_destination, embed=embed)
+                if not isinstance(rz.discord_destination, discord.member.Member):
+                    objects_to_save.append(
+                        RaidMessage(raid=raid, channel=raid_message.channel.id, message=raid_message.id))
+                    raids.message_map[raid.display_id].append(raid_message)
+            except discord.errors.Forbidden:
+                print('Unable to send raid to channel {}. The bot does not have permission.'.format(
+                    rz.discord_destination.name))
+                pass
+    return objects_to_save
+
+
+@client.event
+async def on_channel_delete(channel):
+    # If the channel was a raid zone, delete it.
+    if channel.id in raid_zones.zones:
+        raid_zones.zones[channel.id].delete()
+
+
 async def background_cleanup():
-    global resetDateTime
+    global reset_date_time
     await client.wait_until_ready()
     while not client.is_closed:
         # Delete expired raids
-        expiredRaids = []
+        expired_raids = []
         currentTime = datetime.now(easternTz)
         # Find expired raids
-        for raid in raids.raids.values():
-            if currentTime > raid.end:
-                expiredRaids.append(raid)
+        with transaction.atomic():
+            for raid in raids.raid_map.values():
+                if currentTime > raid.expiration:
+                    raid.active = False
+                    raid.save()
+                    expired_raids.append(raid)
         # Process expired raids
-        for raid in expiredRaids:
-            for message in raid.messages:
+        for raid in expired_raids:
+            for message in raids.message_map[raid.display_id]:
                 try:
                     await client.delete_message(message)
-                except discord.errors.NotFound as e:
+                except discord.errors.NotFound:
                     pass
-            if raid.channel is not None:
+            if raid.display_id in raids.channel_map and raids.channel_map[raid.display_id] is not None:
                 try:
-                    await client.delete_channel(raid.channel)
-                except discord.errors.NotFound as e:
+                    await client.delete_channel(raids.channel_map[raid.display_id])
+                except discord.errors.NotFound:
                     pass
             raids.remove_raid(raid)
 
-        # Check to see if the raid counter needs to be reset
-        if datetime.now(easternTz) > resetDateTime:
+        # Check to see if the raid manager needs to be reset
+        if datetime.now(easternTz) > reset_date_time:
             # Get the next reset time.
-            resetDateTime = datetime.now(easternTz).replace(hour=0, minute=0, second=0, microsecond=0) + timedelta(hours=24)
-            raids.clear_raids()
+            reset_date_time = datetime.now(easternTz).replace(hour=0, minute=0, second=0, microsecond=0) + timedelta(
+                hours=24)
+            raids.reset()
 
-        await asyncio.sleep(60) # task runs every 60 seconds
+        await asyncio.sleep(60)  # task runs every 60 seconds
+
 
 client.loop.create_task(background_cleanup())
 
