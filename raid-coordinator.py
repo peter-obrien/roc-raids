@@ -273,6 +273,8 @@ async def on_message(message):
     else:
         # Covert the message to lowercase to make the commands case-insensitive.
         lowercase_message = message.content.lower()
+        # Used for channel configuration commands
+        can_manage_channels = message.channel.permissions_for(message.author).manage_channels
 
         if lowercase_message.startswith('!who '):
             user_raid_id = message.content[5:]
@@ -406,119 +408,112 @@ async def on_message(message):
                         await client.delete_message(message)
                     except discord.errors.NotFound as e:
                         pass
-        elif lowercase_message.startswith('!'):
-            # Channel configuration commands
-            can_manage_channels = message.channel.permissions_for(message.author).manage_channels
-            if can_manage_channels:
-                if lowercase_message.startswith('!botonly ') and not message.channel.is_private:
-                    toggle_value = message.content[9:]
-                    if toggle_value == 'on':
-                        if message.channel not in botOnlyChannels:
-                            boc = BotOnlyChannel(channel=message.channel.id)
-                            boc.save()
-                            botOnlyChannels.append(message.channel)
-                            await client.send_message(message.channel, 'Bot only commands enabled.')
-                    elif toggle_value == 'off':
-                        if message.channel in botOnlyChannels:
-                            boc = BotOnlyChannel.objects.get(channel=message.channel.id)
-                            boc.delete()
-                            botOnlyChannels.remove(message.channel)
-                            await client.send_message(message.channel, 'Bot only commands disabled.')
-                    else:
-                        await client.send_message(message.channel,
-                                                  'Command to change bot only status:\n\n`!botonly [on/off]`')
-                    await client.delete_message(message)
-                elif lowercase_message.startswith('!setup '):
-                    coordinates = message.content[7:]
-                    if coordinates.find(',') != -1:
-                        try:
-                            coord_tokens = coordinates.split(',')
-                            latitude = Decimal(coord_tokens[0].strip())
-                            longitude = Decimal(coord_tokens[1].strip())
+        elif can_manage_channels and lowercase_message.startswith('!botonly ') and not message.channel.is_private:
+            toggle_value = message.content[9:]
+            if toggle_value == 'on':
+                if message.channel not in botOnlyChannels:
+                    boc = BotOnlyChannel(channel=message.channel.id)
+                    boc.save()
+                    botOnlyChannels.append(message.channel)
+                    await client.send_message(message.channel, 'Bot only commands enabled.')
+            elif toggle_value == 'off':
+                if message.channel in botOnlyChannels:
+                    boc = BotOnlyChannel.objects.get(channel=message.channel.id)
+                    boc.delete()
+                    botOnlyChannels.remove(message.channel)
+                    await client.send_message(message.channel, 'Bot only commands disabled.')
+            else:
+                await client.send_message(message.channel,
+                                          'Command to change bot only status:\n\n`!botonly [on/off]`')
+            await client.delete_message(message)
+        elif can_manage_channels and lowercase_message.startswith('!setup '):
+            coordinates = message.content[7:]
+            if coordinates.find(',') != -1:
+                try:
+                    coord_tokens = coordinates.split(',')
+                    latitude = Decimal(coord_tokens[0].strip())
+                    longitude = Decimal(coord_tokens[1].strip())
 
-                            if message.channel.id in raid_zones.zones:
-                                rz = raid_zones.zones[message.channel.id]
-                                rz.latitude = latitude
-                                rz.longitude = longitude
-                                rz.save()
-                                await client.send_message(message.channel, 'Raid zone coordinates updated')
-                            else:
-                                rz = raid_zones.create_zone(message.channel.id, latitude, longitude)
-                                rz.discord_destination = message.channel
-                                await client.send_message(message.channel, 'Raid zone created')
-                        except Exception as e:
-                            print(e)
-                            await client.send_message(message.channel, embed=channelConfigMessage,
-                                                      content='There was an error handling your request.\n\n`{}`'.format(
-                                                          message.content))
-                    else:
-                        await client.send_message(message.channel, content='Invalid command: `{}`'.format(message.content),
-                                                  embed=channelConfigMessage)
-                    await client.delete_message(message)
-                elif lowercase_message.startswith('!radius '):
-                    user_radius = message.content[8:]
-                    try:
-                        radius = Decimal(user_radius)
-                        if message.channel.id in raid_zones.zones:
-                            rz = raid_zones.zones[message.channel.id]
-                            rz.radius = radius
-                            rz.save()
-                            await client.send_message(message.channel, 'Radius updated')
-                        else:
-                            await client.send_message(message.channel,
-                                                      content='Setup has not been run for this channel.',
-                                                      embed=channelConfigMessage)
-                    except InvalidOperation:
-                        await client.send_message(message.channel, 'Invalid radius: {}'.format(user_radius))
-                        pass
-                    finally:
-                        await client.delete_message(message)
-                elif lowercase_message.startswith('!filter '):
-                    user_pokemon_list = message.content[8:]
-                    try:
-                        if message.channel.id in raid_zones.zones:
-                            rz = raid_zones.zones[message.channel.id]
-                            new_pokemon_filter = []
-                            if user_pokemon_list.find(',') == -1:
-                                if '0' != user_pokemon_list:
-                                    new_pokemon_filter.append(int(user_pokemon_list))
-                            else:
-                                for pokemon_number in user_pokemon_list.split(','):
-                                    new_pokemon_filter.append(int(pokemon_number))
-                            rz.filters['pokemon'].clear()
-                            rz.filters['pokemon'] = new_pokemon_filter
-                            rz.save()
-                            await client.send_message(message.channel, 'Updated filter list')
-                        else:
-                            await client.send_message(message.channel, embed=channelConfigMessage,
-                                                      content='Setup has not been run for this channel.')
-                    except Exception as e:
-                        print('Unable to process: {}'.format(message.content))
-                        print(e)
-                        await client.send_message(message.channel,
-                                                  'Unable to process filter. Please verify your input: {}'.format(
-                                                      user_pokemon_list))
-                        pass
-                    await client.delete_message(message)
-                elif lowercase_message == '!info':
                     if message.channel.id in raid_zones.zones:
                         rz = raid_zones.zones[message.channel.id]
-                        output = 'Here is the raid zone configuration for this channel:\n\nCoordinates: `{}, {}`\nRadius: `{}`\nPokemon: `{}`'.format(
-                            rz.latitude, rz.longitude, rz.radius, rz.filters['pokemon'])
-                        await client.send_message(message.channel, output)
+                        rz.latitude = latitude
+                        rz.longitude = longitude
+                        rz.save()
+                        await client.send_message(message.channel, 'Raid zone coordinates updated')
                     else:
-                        await client.send_message(message.channel, 'This channel is not configured as a raid zone.')
-                    await client.delete_message(message)
-                else:
-                    # TODO create admin specific help
-                    await client.send_message(message.author, embed=channelConfigMessage)
+                        rz = raid_zones.create_zone(message.channel.id, latitude, longitude)
+                        rz.discord_destination = message.channel
+                        await client.send_message(message.channel, 'Raid zone created')
+                except Exception as e:
+                    print(e)
+                    await client.send_message(message.channel, embed=channelConfigMessage,
+                                              content='There was an error handling your request.\n\n`{}`'.format(
+                                                  message.content))
             else:
-                await client.send_message(message.author, embed=helpMessage)
-                if not message.channel.is_private:
-                    try:
-                        await client.delete_message(message)
-                    except discord.errors.NotFound:
-                        pass
+                await client.send_message(message.channel, content='Invalid command: `{}`'.format(message.content),
+                                          embed=channelConfigMessage)
+            await client.delete_message(message)
+        elif can_manage_channels and lowercase_message.startswith('!radius '):
+            user_radius = message.content[8:]
+            try:
+                radius = Decimal(user_radius)
+                if message.channel.id in raid_zones.zones:
+                    rz = raid_zones.zones[message.channel.id]
+                    rz.radius = radius
+                    rz.save()
+                    await client.send_message(message.channel, 'Radius updated')
+                else:
+                    await client.send_message(message.channel,
+                                              content='Setup has not been run for this channel.',
+                                              embed=channelConfigMessage)
+            except InvalidOperation:
+                await client.send_message(message.channel, 'Invalid radius: {}'.format(user_radius))
+                pass
+            finally:
+                await client.delete_message(message)
+        elif can_manage_channels and lowercase_message.startswith('!filter '):
+            user_pokemon_list = message.content[8:]
+            try:
+                if message.channel.id in raid_zones.zones:
+                    rz = raid_zones.zones[message.channel.id]
+                    new_pokemon_filter = []
+                    if user_pokemon_list.find(',') == -1:
+                        if '0' != user_pokemon_list:
+                            new_pokemon_filter.append(int(user_pokemon_list))
+                    else:
+                        for pokemon_number in user_pokemon_list.split(','):
+                            new_pokemon_filter.append(int(pokemon_number))
+                    rz.filters['pokemon'].clear()
+                    rz.filters['pokemon'] = new_pokemon_filter
+                    rz.save()
+                    await client.send_message(message.channel, 'Updated filter list')
+                else:
+                    await client.send_message(message.channel, embed=channelConfigMessage,
+                                              content='Setup has not been run for this channel.')
+            except Exception as e:
+                print('Unable to process: {}'.format(message.content))
+                print(e)
+                await client.send_message(message.channel,
+                                          'Unable to process filter. Please verify your input: {}'.format(
+                                              user_pokemon_list))
+                pass
+            await client.delete_message(message)
+        elif can_manage_channels and lowercase_message == '!info':
+            if message.channel.id in raid_zones.zones:
+                rz = raid_zones.zones[message.channel.id]
+                output = 'Here is the raid zone configuration for this channel:\n\nCoordinates: `{}, {}`\nRadius: `{}`\nPokemon: `{}`'.format(
+                    rz.latitude, rz.longitude, rz.radius, rz.filters['pokemon'])
+                await client.send_message(message.channel, output)
+            else:
+                await client.send_message(message.channel, 'This channel is not configured as a raid zone.')
+            await client.delete_message(message)
+        elif lowercase_message.startswith('!'):
+            await client.send_message(message.author, embed=helpMessage)
+            if not message.channel.is_private:
+                try:
+                    await client.delete_message(message)
+                except discord.errors.NotFound:
+                    pass
         elif message.channel in botOnlyChannels:
             if not message.author.bot:
                 await client.send_message(message.author, 'Only bot commands may be used in this channel.')
