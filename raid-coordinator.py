@@ -277,8 +277,16 @@ async def on_message(message):
     else:
         # Covert the message to lowercase to make the commands case-insensitive.
         lowercase_message = message.content.lower()
+
+        # Ignore bots (including self)
+        if message.author.bot:
+            return
+
         # Used for channel configuration commands
-        can_manage_channels = message.channel.permissions_for(message.author).manage_channels
+        if isinstance(message.author, discord.member.Member):
+            can_manage_channels = message.channel.permissions_for(message.author).manage_channels
+        else:
+            can_manage_channels = False
 
         if lowercase_message.startswith('!who '):
             user_raid_id = message.content[5:]
