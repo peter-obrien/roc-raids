@@ -51,8 +51,8 @@ easternTz = timezone('US/Eastern')
 utcTz = timezone('UTC')
 reset_date_time = datetime.now(easternTz).replace(hour=0, minute=0, second=0, microsecond=0) + timedelta(hours=24)
 googleDirectionsUrlBase = 'https://www.google.com/maps/?daddr='
-not_read = discord.PermissionOverwrite(read_messages=False)
-read = discord.PermissionOverwrite(read_messages=True)
+private_channel_no_access = discord.PermissionOverwrite(read_messages=False)
+private_channel_access = discord.PermissionOverwrite(read_messages=True, mention_everyone=True)
 
 helpMessage = discord.Embed(title="Commands", description="Here are the commands that the roc-raids bot recognizes.",
                             color=0xf0040b)
@@ -323,8 +323,8 @@ async def on_message(message):
                 if private_raid_channel is None:
                     private_raid_channel = await client.create_channel(discordServer,
                                                                        'raid-{}-chat'.format(raid.display_id),
-                                                                       (discordServer.default_role, not_read),
-                                                                       (discordServer.me, read))
+                                                                       (discordServer.default_role, private_channel_no_access),
+                                                                       (discordServer.me, private_channel_access))
                     raids.channel_map[raid.display_id] = private_raid_channel
 
                     # Send the raid card to the top of the channel.
@@ -343,7 +343,7 @@ async def on_message(message):
                     await client.edit_message(msg, embed=raids.embed_map[raid.display_id])
 
                 # Add the user to the private channel for the raid
-                await client.edit_channel_permissions(raids.channel_map[raid.display_id], author, read)
+                await client.edit_channel_permissions(raids.channel_map[raid.display_id], author, private_channel_access)
                 await client.send_message(raids.channel_map[raid.display_id],
                                           '{}{}'.format(author.mention, resultTuple[0].details()))
 
@@ -374,7 +374,7 @@ async def on_message(message):
 
                 if displayMsg is not None:
                     # Remove the user to the private channel for the raid
-                    await client.edit_channel_permissions(raids.channel_map[raid.display_id], author, not_read)
+                    await client.edit_channel_permissions(raids.channel_map[raid.display_id], author, private_channel_no_access)
                     await client.send_message(raids.channel_map[raid.display_id],
                                               '**{}** is no longer attending'.format(author.display_name))
 
