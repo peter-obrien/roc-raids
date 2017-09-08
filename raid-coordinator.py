@@ -211,13 +211,26 @@ async def on_message(message):
                 keyAndValue = token.split('::')
                 attributes[keyAndValue[0].upper()] = keyAndValue[1]
 
-            pokemon = attributes['POKEMON']
-            pokemon_number = attributes['POKEMON#']
-            raid_level = attributes['RAIDLEVEL']
-            gym_name = attributes['GYMNAME']
-            end_time_tokens = attributes['TIME'].split(':')
-            quick_move = attributes['QUICKMOVE']
-            charge_move = attributes['CHARGEMOVE']
+            # Determine if this is a raid egg or hatched raid
+            try:
+                message_is_egg = False
+                pokemon = attributes['POKEMON']
+                pokemon_number = attributes['POKEMON#']
+                quick_move = attributes['QUICKMOVE']
+                charge_move = attributes['CHARGEMOVE']
+            except KeyError:
+                message_is_egg = True
+                pokemon = None
+                pokemon_number = None
+                quick_move = None
+                charge_move = None
+            finally:
+                raid_level = attributes['RAIDLEVEL']
+                gym_name = attributes['GYMNAME']
+                if message_is_egg:
+                    end_time_tokens = attributes['ENDTIMERAID'].split(':')
+                else:
+                    end_time_tokens = attributes['TIME'].split(':')
 
             end_time = make_aware(message.timestamp).replace(hour=int(end_time_tokens[0]),
                                                              minute=int(end_time_tokens[1]),
@@ -231,12 +244,15 @@ async def on_message(message):
 
             raid = raids.create_raid(pokemon, pokemon_number, raid_level, gym_name, end_time, latitude, longitude)
 
-            if raid.id is None:
+            if raid.id is None or (raid.is_egg and not message_is_egg):
+
                 # Build the jsonb field contents
                 data = dict()
 
-                data['charge_move'] = charge_move
-                data['quick_move'] = quick_move
+                if not charge_move is None:
+                    data['charge_move'] = charge_move
+                if not quick_move is None:
+                    data['quick_move'] = quick_move
                 data['url'] = the_embed['url']
 
                 image = dict()
@@ -257,9 +273,26 @@ async def on_message(message):
 
                 raid.data = data
 
-                raids.track_raid(raid)
+                raid_was_egg = raid.id is not None and raid.is_egg and not message_is_egg
+                raid.is_egg = message_is_egg
 
-                result = await raids.build_raid_embed(raid)
+                if raid.id is None:
+                    raids.track_raid(raid)
+                else:
+                    raid.save()
+
+                # If transitioning from a raid egg to a raid pokemon, delete all the previous egg messages.
+                if raid_was_egg:
+                    for m in raids.message_map[raid.display_id]:
+                        try:
+                            await client.delete_message(m)
+                        except Exception:
+                            pass
+
+                if raid.is_egg:
+                    result = await raids.build_egg_embed(raid)
+                else:
+                    result = await raids.build_raid_embed(raid)
 
                 raids.embed_map[raid.display_id] = result
 
@@ -590,7 +623,7 @@ async def background_cleanup():
         # Find expired raids
         with transaction.atomic():
             for raid in raids.raid_map.values():
-                if currentTime > raid.expiration:
+                if not raid.is_egg and currentTime > raid.expiration:
                     raid.active = False
                     raid.save()
                     expired_raids.append(raid)
