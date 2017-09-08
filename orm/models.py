@@ -5,8 +5,8 @@ from math import sin, cos, sqrt, atan2, radians
 
 class Raid(models.Model):
     display_id = models.IntegerField()
-    pokemon_name = models.CharField(max_length=100)
-    pokemon_number = models.IntegerField()
+    pokemon_name = models.CharField(max_length=100, null=True)
+    pokemon_number = models.IntegerField(null=True)
     raid_level = models.IntegerField()
     gym_name = models.CharField(max_length=255)
     expiration = models.DateTimeField()
@@ -15,6 +15,7 @@ class Raid(models.Model):
     longitude = models.DecimalField(max_digits=9, decimal_places=6)
     data = JSONField()
     private_channel = models.CharField(max_length=64, null=True)
+    is_egg = models.BooleanField(default=False)
 
     def __hash__(self):
         return hash((self.pokemon_name, self.latitude, self.longitude))
