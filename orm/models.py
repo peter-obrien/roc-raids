@@ -18,10 +18,10 @@ class Raid(models.Model):
     is_egg = models.BooleanField(default=False)
 
     def __hash__(self):
-        return hash((self.pokemon_name, self.latitude, self.longitude))
+        return hash((self.raid_level, self.latitude, self.longitude))
 
     def __eq__(self, other):
-        return (self.pokemon_name == other.pokemon_name
+        return (self.raid_level == other.raid_level
                 and self.latitude == other.latitude
                 and self.longitude == other.longitude)
 
