@@ -32,7 +32,10 @@ class RaidManager:
             self.channel_map[raid.display_id] = discordServer.get_channel(raid.private_channel)
             self.message_map[raid.display_id] = []
             self.participant_map[raid.display_id] = set()
-            self.embed_map[raid.display_id] = await self.build_raid_embed(raid)
+            if raid.is_egg:
+                self.embed_map[raid.display_id] = await self.build_egg_embed(raid)
+            else:
+                self.embed_map[raid.display_id] = await self.build_raid_embed(raid)
             for participant in RaidParticipant.objects.filter(raid=raid, attending=True):
                 self.participant_map[raid.display_id].add(participant)
             for rm in RaidMessage.objects.filter(raid=raid):
@@ -149,6 +152,26 @@ class RaidManager:
             desc = '{}\n\n**Ends:** *{}*'.format(raid.gym_name, localtime(raid.expiration).strftime(time_format))
 
         result = discord.Embed(title=raid.pokemon_name + ': Raid #' + str(raid.display_id), url=raid.data['url'],
+                               description=desc, colour=embed_color)
+
+        if 'image' in raid.data:
+            result.set_image(url=raid.data['image']['url'])
+            result.image.height = raid.data['image']['height']
+            result.image.width = raid.data['image']['width']
+            result.image.proxy_url = raid.data['image']['proxy_url']
+
+        if 'thumbnail' in raid.data:
+            result.set_thumbnail(url=raid.data['thumbnail']['url'])
+            result.thumbnail.height = raid.data['thumbnail']['height']
+            result.thumbnail.width = raid.data['thumbnail']['width']
+            result.thumbnail.proxy_url = raid.data['thumbnail']['proxy_url']
+
+        return result
+
+    async def build_egg_embed(self, raid):
+        desc = '{}\n\n**Hatches:** *{}*'.format(raid.gym_name, localtime(raid.expiration).strftime(time_format))
+
+        result = discord.Embed(title='Level {} egg: Raid #{}'.format(raid.raid_level, raid.display_id), url=raid.data['url'],
                                description=desc, colour=embed_color)
 
         if 'image' in raid.data:
