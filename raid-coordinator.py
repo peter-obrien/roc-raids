@@ -318,7 +318,8 @@ async def on_message(message):
                             pass
                     raids.message_map[raid.display_id] = []
 
-                    raids.update_embed_participants(raid)
+                    if len(raids.participant_map[raid.display_id]) > 0:
+                        raids.update_embed_participants(raid)
 
                     # Send the new embed to the private channel
                     if raid.private_channel is not None:
