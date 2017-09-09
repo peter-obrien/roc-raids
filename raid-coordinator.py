@@ -44,6 +44,24 @@ try:
 except Exception as e:
     test_message_id = None
 
+try:
+    commandChar = config['DEFAULT']['command_character']
+except Exception:
+    commandChar = '!'
+
+# Build the command strings for on_message
+join_command = commandChar + 'join '
+leave_command = commandChar + 'leave '
+raid_command = commandChar + 'raid '
+details_command = commandChar + 'details '
+who_command = commandChar + 'who '
+botonly_command = commandChar + 'botonly '
+setup_command = commandChar + 'setup '
+radius_command = commandChar + 'radius '
+filter_command = commandChar + 'filter '
+toggle_command = commandChar + 'zone '
+info_command = commandChar + 'info'
+
 client = discord.Client()
 raids = RaidManager()
 raid_zones = RaidZoneManager()
@@ -54,40 +72,40 @@ googleDirectionsUrlBase = 'https://www.google.com/maps/?daddr='
 private_channel_no_access = discord.PermissionOverwrite(read_messages=False)
 private_channel_access = discord.PermissionOverwrite(read_messages=True, mention_everyone=True)
 
-helpMessage = discord.Embed(title="Commands", description="Here are the commands that the roc-raids bot recognizes.",
+helpMessage = discord.Embed(title="Commands", description="Here are the commands that I recognize.",
                             color=0xf0040b)
-helpMessage.add_field(name="!join [raid id] (party size) (notes/start time)",
+helpMessage.add_field(name="{}[raid id] (party size) (notes/start time)".format(join_command),
                       value="Use this command to signal to others that you wish to attend the raid. The message with the specified raid id will be updated to reflect your party's size. Can be used again to overwrite your previous party for the raid.",
                       inline=False)
-helpMessage.add_field(name="!leave [raid id]",
+helpMessage.add_field(name="{}[raid id]".format(leave_command),
                       value="Can't make the raid you intended to join? Use this to take your party off the list.",
                       inline=False)
-helpMessage.add_field(name="!raid [raid id]",
-                      value="Receive a PM from the bot with the raid summary. This contains the gym name, pokemon, raid end time and Google Maps location. Can also use !details [raid id]",
+helpMessage.add_field(name="{}[raid id]".format(raid_command),
+                      value="Receive a PM from the bot with the raid summary. This contains the gym name, pokemon, raid end time and Google Maps location. Can also use {}[raid id]".format(details_command),
                       inline=False)
-helpMessage.add_field(name="!who [raid id]",
+helpMessage.add_field(name="{}[raid id]".format(who_command),
                       value="Receive a PM from the bot with the details of who is attending the raid along with their party size and notes.",
                       inline=False)
 
 channelConfigMessage = discord.Embed(title="Channel Config Commands",
                                      description="Here are the available commands to configure channels.",
                                      color=0xf0040b)
-channelConfigMessage.add_field(name="!setup latitude, longitude",
+channelConfigMessage.add_field(name="{}latitude, longitude".format(setup_command),
                                value="Creates a raid zone with radius 5km. If used again replaces the coordinates.",
                                inline=False)
-channelConfigMessage.add_field(name="!radius xxx.x",
+channelConfigMessage.add_field(name="{}xxx.x".format(radius_command),
                                value="Changes the raid zone radius.",
                                inline=False)
-channelConfigMessage.add_field(name="!filter pokemon_numbers",
-                               value="Allows for a comma separated list of pokemon numbers to enable filtering. E.g. `!filter 144,145,146`. Use `0` to clear the filter.",
+channelConfigMessage.add_field(name="{}pokemon_numbers".format(filter_command),
+                               value="Allows for a comma separated list of pokemon numbers to enable filtering. E.g. `{}144,145,146`. Use `0` to clear the filter.".format(filter_command),
                                inline=False)
-channelConfigMessage.add_field(name="!raids [on/off]",
+channelConfigMessage.add_field(name="{}[on/off]".format(toggle_command),
                                value="Toggles if this raid zone is active or not.",
                                inline=False)
-channelConfigMessage.add_field(name="!info",
+channelConfigMessage.add_field(name="{}".format(info_command),
                                value="Displays the configuration for the channel.",
                                inline=False)
-channelConfigMessage.add_field(name="!botonly [on/off]",
+channelConfigMessage.add_field(name="{}[on/off]".format(botonly_command),
                                value="Toggles if this channel can only allow bot commands.",
                                inline=False)
 
@@ -332,8 +350,8 @@ async def on_message(message):
         else:
             can_manage_channels = False
 
-        if lowercase_message.startswith('!who '):
-            user_raid_id = message.content[5:]
+        if lowercase_message.startswith(who_command):
+            user_raid_id = message.content[len(who_command):]
             try:
                 raid = raids.get_raid(user_raid_id)
                 msg = raids.get_participant_printout(raid)
@@ -346,8 +364,8 @@ async def on_message(message):
                         await client.delete_message(message)
                     except discord.errors.NotFound:
                         pass
-        elif lowercase_message.startswith('!join '):
-            command_details = message.content[6:].split(' ')
+        elif lowercase_message.startswith(join_command):
+            command_details = message.content[len(join_command):].split(' ')
             user_raid_id = command_details[0]
             party_size = '1'
             notes = None
@@ -405,8 +423,8 @@ async def on_message(message):
                         await client.delete_message(message)
                     except discord.errors.NotFound:
                         pass
-        elif lowercase_message.startswith('!leave '):
-            user_raid_id = message.content[7:]
+        elif lowercase_message.startswith(leave_command):
+            user_raid_id = message.content[len(leave_command):]
             author = message.author
             try:
                 # If the message is coming from PM we want to use the server's version of the user.
@@ -438,8 +456,8 @@ async def on_message(message):
                         await client.delete_message(message)
                     except discord.errors.NotFound:
                         pass
-        elif lowercase_message.startswith('!details '):
-            user_raid_id = message.content[9:]
+        elif lowercase_message.startswith(details_command):
+            user_raid_id = message.content[len(details_command):]
             try:
                 raid = raids.get_raid(user_raid_id)
                 await client.send_message(message.author, embed=raids.embed_map[raid.display_id])
@@ -451,8 +469,8 @@ async def on_message(message):
                         await client.delete_message(message)
                     except discord.errors.NotFound as e:
                         pass
-        elif lowercase_message.startswith('!raid '):  # alias for !details
-            user_raid_id = message.content[6:]
+        elif lowercase_message.startswith(raid_command):  # alias for !details
+            user_raid_id = message.content[len(raid_command):]
             try:
                 raid = raids.get_raid(user_raid_id)
                 await client.send_message(message.author, embed=raids.embed_map[raid.display_id])
@@ -464,8 +482,8 @@ async def on_message(message):
                         await client.delete_message(message)
                     except discord.errors.NotFound as e:
                         pass
-        elif can_manage_channels and lowercase_message.startswith('!botonly ') and not message.channel.is_private:
-            toggle_value = lowercase_message[9:]
+        elif can_manage_channels and lowercase_message.startswith(botonly_command) and not message.channel.is_private:
+            toggle_value = lowercase_message[len(botonly_command):]
             if toggle_value == 'on':
                 if message.channel not in botOnlyChannels:
                     boc = BotOnlyChannel(channel=message.channel.id)
@@ -480,10 +498,10 @@ async def on_message(message):
                     await client.send_message(message.channel, 'Bot only commands disabled.')
             else:
                 await client.send_message(message.channel,
-                                          'Command to change bot only status:\n\n`!botonly [on/off]`')
+                                          'Command to change bot only status:\n\n`{}[on/off]`'.format(botonly_command))
             await client.delete_message(message)
-        elif can_manage_channels and lowercase_message.startswith('!setup '):
-            coordinates = message.content[7:]
+        elif can_manage_channels and lowercase_message.startswith(setup_command):
+            coordinates = message.content[len(setup_command):]
             if coordinates.find(',') != -1:
                 try:
                     coord_tokens = coordinates.split(',')
@@ -509,8 +527,8 @@ async def on_message(message):
                 await client.send_message(message.channel, content='Invalid command: `{}`'.format(message.content),
                                           embed=channelConfigMessage)
             await client.delete_message(message)
-        elif can_manage_channels and lowercase_message.startswith('!radius '):
-            user_radius = message.content[8:]
+        elif can_manage_channels and lowercase_message.startswith(radius_command):
+            user_radius = message.content[len(radius_command):]
             try:
                 radius = Decimal(user_radius)
                 if message.channel.id in raid_zones.zones:
@@ -527,8 +545,8 @@ async def on_message(message):
                 pass
             finally:
                 await client.delete_message(message)
-        elif can_manage_channels and lowercase_message.startswith('!filter '):
-            user_pokemon_list = message.content[8:]
+        elif can_manage_channels and lowercase_message.startswith(filter_command):
+            user_pokemon_list = message.content[len(filter_command):]
             try:
                 if message.channel.id in raid_zones.zones:
                     rz = raid_zones.zones[message.channel.id]
@@ -554,10 +572,10 @@ async def on_message(message):
                                               user_pokemon_list))
                 pass
             await client.delete_message(message)
-        elif can_manage_channels and lowercase_message.startswith('!raids '):
+        elif can_manage_channels and lowercase_message.startswith(toggle_command):
             if message.channel.id in raid_zones.zones:
                 rz = raid_zones.zones[message.channel.id]
-                token = lowercase_message[7:]
+                token = lowercase_message[len(toggle_command):]
                 try:
                     if token == 'on':
                         rz.active = True
@@ -575,7 +593,7 @@ async def on_message(message):
             else:
                 await client.send_message(message.channel, embed=channelConfigMessage,
                                           content='Setup has not been run for this channel.')
-        elif can_manage_channels and lowercase_message == '!info':
+        elif can_manage_channels and lowercase_message == info_command:
             if message.channel.id in raid_zones.zones:
                 rz = raid_zones.zones[message.channel.id]
                 output = 'Here is the raid zone configuration for this channel:\n\nStatus: `{}`\nCoordinates: `{}, {}`\nRadius: `{}`\nPokemon: `{}`'.format(
@@ -584,7 +602,7 @@ async def on_message(message):
             else:
                 await client.send_message(message.channel, 'This channel is not configured as a raid zone.')
             await client.delete_message(message)
-        elif lowercase_message.startswith('!'):
+        elif lowercase_message.startswith(commandChar):
             await client.send_message(message.author, embed=helpMessage)
             if not message.channel.is_private:
                 try:
@@ -596,7 +614,7 @@ async def on_message(message):
                 await client.send_message(message.author, 'Only bot commands may be used in this channel.')
                 try:
                     await client.delete_message(message)
-                except discord.errors.NotFound as e:
+                except discord.errors.NotFound:
                     pass
 
 
