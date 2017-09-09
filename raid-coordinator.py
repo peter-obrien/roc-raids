@@ -212,25 +212,24 @@ async def on_message(message):
                 attributes[keyAndValue[0].upper()] = keyAndValue[1]
 
             # Determine if this is a raid egg or hatched raid
-            try:
-                message_is_egg = False
-                pokemon = attributes['POKEMON']
-                pokemon_number = attributes['POKEMON#']
-                quick_move = attributes['QUICKMOVE']
-                charge_move = attributes['CHARGEMOVE']
-            except KeyError:
-                message_is_egg = True
+            message_is_egg = attributes['ISEGG'] == 'true'
+            raid_level = attributes['RAIDLEVEL']
+            if raid_level.isdigit():
+                raid_level = int(raid_level)
+            gym_name = attributes['GYMNAME']
+
+            if message_is_egg:
                 pokemon = None
                 pokemon_number = None
                 quick_move = None
                 charge_move = None
-            finally:
-                raid_level = attributes['RAIDLEVEL']
-                gym_name = attributes['GYMNAME']
-                if message_is_egg:
-                    end_time_tokens = attributes['ENDTIMERAID'].split(':')
-                else:
-                    end_time_tokens = attributes['TIME'].split(':')
+                end_time_tokens = attributes['BEGINTIMERAID'].split(':')
+            else:
+                pokemon = attributes['POKEMON']
+                pokemon_number = attributes['POKEMON#']
+                quick_move = attributes['QUICKMOVE']
+                charge_move = attributes['CHARGEMOVE']
+                end_time_tokens = attributes['TIME'].split(':')
 
             end_time = make_aware(message.timestamp).replace(hour=int(end_time_tokens[0]),
                                                              minute=int(end_time_tokens[1]),
@@ -279,22 +278,34 @@ async def on_message(message):
                 if raid.id is None:
                     raids.track_raid(raid)
                 else:
+                    raid.pokemon_name = pokemon
+                    raid.pokemon_number = pokemon_number
+                    raid.expiration = end_time
                     raid.save()
-
-                # If transitioning from a raid egg to a raid pokemon, delete all the previous egg messages.
-                if raid_was_egg:
-                    for m in raids.message_map[raid.display_id]:
-                        try:
-                            await client.delete_message(m)
-                        except Exception:
-                            pass
 
                 if raid.is_egg:
                     result = await raids.build_egg_embed(raid)
                 else:
                     result = await raids.build_raid_embed(raid)
 
+
                 raids.embed_map[raid.display_id] = result
+
+                if raid_was_egg:
+                    # If transitioning from a raid egg to a raid pokemon, delete all the previous egg messages.
+                    for m in raids.message_map[raid.display_id]:
+                        try:
+                            await client.delete_message(m)
+                        except Exception:
+                            pass
+                    raids.message_map[raid.display_id] = []
+
+                    raids.update_embed_participants(raid)
+
+                    # Send the new embed to the private channel
+                    if raid.private_channel is not None:
+                        private_raid_card = await client.send_message(raids.channel_map[raid.display_id], embed=raids.embed_map[raid.display_id])
+                        raids.message_map[raid.display_id].append(private_raid_card)
 
             raid_embed = raids.embed_map[raid.display_id]
             raid_message = await client.send_message(raidDestChannel, embed=raid_embed)
