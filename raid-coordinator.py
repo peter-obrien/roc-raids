@@ -640,8 +640,8 @@ async def on_message(message):
         elif can_manage_channels and lowercase_message == info_command:
             if message.channel.id in raid_zones.zones:
                 rz = raid_zones.zones[message.channel.id]
-                output = 'Here is the raid zone configuration for this channel:\n\nStatus: `{}`\nCoordinates: `{}, {}`\nRadius: `{}`\nPokemon: `{}`'.format(
-                    rz.status, rz.latitude, rz.longitude, rz.radius, rz.filters['pokemon'])
+                output = 'Here is the raid zone configuration for this channel:\n\nStatus: `{}`\nCoordinates: `{}, {}`\nRadius: `{}`\nEggs: `{}`\nPokemon: `{}`'.format(
+                    rz.status, rz.latitude, rz.longitude, rz.radius, rz.filters['raid_levels'], rz.filters['pokemon'])
                 await client.send_message(message.channel, output)
             else:
                 await client.send_message(message.channel, 'This channel is not configured as a raid zone.')
