@@ -12,7 +12,7 @@ from decimal import *
 from pytz import timezone
 from django.db import transaction
 from orm.models import RaidMessage, BotOnlyChannel
-from raids import RaidManager, RaidZoneManager
+from raids import Raid, RaidManager, RaidZoneManager
 from errors import InputError
 
 propFilename = 'properties.ini'
@@ -676,6 +676,11 @@ async def background_cleanup():
             reset_date_time = datetime.now(easternTz).replace(hour=0, minute=0, second=0, microsecond=0) + timedelta(
                 hours=24)
             raids.reset()
+            # Clean up any raids that may still be active in the database
+            for raid in Raid.objects.filter(active=True):
+                raid.active = False
+                raid.save()
+
 
         await asyncio.sleep(60)  # task runs every 60 seconds
 
