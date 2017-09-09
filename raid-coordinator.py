@@ -59,6 +59,7 @@ botonly_command = commandChar + 'botonly '
 setup_command = commandChar + 'setup '
 radius_command = commandChar + 'radius '
 filter_command = commandChar + 'filter '
+egg_command = commandChar + 'egg '
 toggle_command = commandChar + 'zone '
 info_command = commandChar + 'info'
 
@@ -99,6 +100,10 @@ channelConfigMessage.add_field(name="{}xxx.x".format(radius_command),
                                inline=False)
 channelConfigMessage.add_field(name="{}pokemon_numbers".format(filter_command),
                                value="Allows for a comma separated list of pokemon numbers to enable filtering. E.g. `{}144,145,146`. Use `0` to clear the filter.".format(
+                                   filter_command),
+                               inline=False)
+channelConfigMessage.add_field(name="{}raid_levels".format(egg_command),
+                               value="Allows for a comma separated list of raid levels to accept. E.g. `{}4,5`. Use `0` to clear the filter.".format(
                                    filter_command),
                                inline=False)
 channelConfigMessage.add_field(name="{}[on/off]".format(toggle_command),
@@ -558,21 +563,21 @@ async def on_message(message):
             finally:
                 await client.delete_message(message)
         elif can_manage_channels and lowercase_message.startswith(filter_command):
-            user_pokemon_list = message.content[len(filter_command):]
+            user_egg_filter_list = message.content[len(filter_command):]
             try:
                 if message.channel.id in raid_zones.zones:
                     rz = raid_zones.zones[message.channel.id]
-                    new_pokemon_filter = []
-                    if user_pokemon_list.find(',') == -1:
-                        if '0' != user_pokemon_list:
-                            new_pokemon_filter.append(int(user_pokemon_list))
+                    new_egg_filter = []
+                    if user_egg_filter_list.find(',') == -1:
+                        if '0' != user_egg_filter_list:
+                            new_egg_filter.append(int(user_egg_filter_list))
                     else:
-                        for pokemon_number in user_pokemon_list.split(','):
-                            new_pokemon_filter.append(int(pokemon_number))
+                        for egg_level in user_egg_filter_list.split(','):
+                            new_egg_filter.append(int(egg_level))
                     rz.filters['pokemon'].clear()
-                    rz.filters['pokemon'] = new_pokemon_filter
+                    rz.filters['pokemon'] = new_egg_filter
                     rz.save()
-                    await client.send_message(message.channel, 'Updated filter list')
+                    await client.send_message(message.channel, 'Updated pokemon filter list')
                 else:
                     await client.send_message(message.channel, embed=channelConfigMessage,
                                               content='Setup has not been run for this channel.')
@@ -581,7 +586,34 @@ async def on_message(message):
                 print(e)
                 await client.send_message(message.channel,
                                           'Unable to process filter. Please verify your input: {}'.format(
-                                              user_pokemon_list))
+                                              user_egg_filter_list))
+                pass
+            await client.delete_message(message)
+        elif can_manage_channels and lowercase_message.startswith(egg_command):
+            user_egg_filter_list = message.content[len(egg_command):]
+            try:
+                if message.channel.id in raid_zones.zones:
+                    rz = raid_zones.zones[message.channel.id]
+                    new_egg_filter = []
+                    if user_egg_filter_list.find(',') == -1:
+                        if '0' != user_egg_filter_list:
+                            new_egg_filter.append(int(user_egg_filter_list))
+                    else:
+                        for egg_level in user_egg_filter_list.split(','):
+                            new_egg_filter.append(int(egg_level))
+                    rz.filters['raid_levels'].clear()
+                    rz.filters['raid_levels'] = new_egg_filter
+                    rz.save()
+                    await client.send_message(message.channel, 'Updated egg filter list')
+                else:
+                    await client.send_message(message.channel, embed=channelConfigMessage,
+                                              content='Setup has not been run for this channel.')
+            except Exception as e:
+                print('Unable to process: {}'.format(message.content))
+                print(e)
+                await client.send_message(message.channel,
+                                          'Unable to process filter. Please verify your input: {}'.format(
+                                              user_egg_filter_list))
                 pass
             await client.delete_message(message)
         elif can_manage_channels and lowercase_message.startswith(toggle_command):
