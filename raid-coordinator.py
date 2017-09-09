@@ -664,7 +664,7 @@ async def background_cleanup():
         # Find expired raids
         with transaction.atomic():
             for raid in raids.raid_map.values():
-                if not raid.is_egg and currentTime > raid.expiration:
+                if currentTime > raid.expiration:
                     raid.active = False
                     raid.save()
                     expired_raids.append(raid)
