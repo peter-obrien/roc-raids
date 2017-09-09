@@ -16,6 +16,7 @@ class Raid(models.Model):
     data = JSONField()
     private_channel = models.CharField(max_length=64, null=True)
     is_egg = models.BooleanField(default=False)
+    hatch_time = models.DateTimeField(null=True)
 
     def __hash__(self):
         return hash((self.raid_level, self.latitude, self.longitude))
@@ -91,7 +92,11 @@ class RaidZone(models.Model):
     def filter(self, raid):
         if self.active:
             if self._isInRaidZone(raid):
-                return self._filter_pokemon(raid)
+                # TODO Filter by raid level
+                if raid.is_egg:
+                    return True
+                else:
+                    return self._filter_pokemon(raid)
         else:
             return False
 
