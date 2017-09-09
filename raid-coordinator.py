@@ -81,7 +81,8 @@ helpMessage.add_field(name="{}[raid id]".format(leave_command),
                       value="Can't make the raid you intended to join? Use this to take your party off the list.",
                       inline=False)
 helpMessage.add_field(name="{}[raid id]".format(raid_command),
-                      value="Receive a PM from the bot with the raid summary. This contains the gym name, pokemon, raid end time and Google Maps location. Can also use {}[raid id]".format(details_command),
+                      value="Receive a PM from the bot with the raid summary. This contains the gym name, pokemon, raid end time and Google Maps location. Can also use {}[raid id]".format(
+                          details_command),
                       inline=False)
 helpMessage.add_field(name="{}[raid id]".format(who_command),
                       value="Receive a PM from the bot with the details of who is attending the raid along with their party size and notes.",
@@ -97,7 +98,8 @@ channelConfigMessage.add_field(name="{}xxx.x".format(radius_command),
                                value="Changes the raid zone radius.",
                                inline=False)
 channelConfigMessage.add_field(name="{}pokemon_numbers".format(filter_command),
-                               value="Allows for a comma separated list of pokemon numbers to enable filtering. E.g. `{}144,145,146`. Use `0` to clear the filter.".format(filter_command),
+                               value="Allows for a comma separated list of pokemon numbers to enable filtering. E.g. `{}144,145,146`. Use `0` to clear the filter.".format(
+                                   filter_command),
                                inline=False)
 channelConfigMessage.add_field(name="{}[on/off]".format(toggle_command),
                                value="Toggles if this raid zone is active or not.",
@@ -241,13 +243,19 @@ async def on_message(message):
                 pokemon_number = None
                 quick_move = None
                 charge_move = None
-                end_time_tokens = attributes['BEGINTIMERAID'].split(':')
+                hatch_time_tokens = attributes['BEGINTIMERAID'].split(':')
+                hatch_time = make_aware(message.timestamp).replace(hour=int(hatch_time_tokens[0]),
+                                                                 minute=int(hatch_time_tokens[1]),
+                                                                 second=0,
+                                                                 microsecond=0)
+                end_time_tokens = attributes['ENDTIMERAID'].split(':')
             else:
                 pokemon = attributes['POKEMON']
                 pokemon_number = attributes['POKEMON#']
                 quick_move = attributes['QUICKMOVE']
                 charge_move = attributes['CHARGEMOVE']
                 end_time_tokens = attributes['TIME'].split(':')
+                hatch_time = None
 
             end_time = make_aware(message.timestamp).replace(hour=int(end_time_tokens[0]),
                                                              minute=int(end_time_tokens[1]),
@@ -259,7 +267,7 @@ async def on_message(message):
             latitude = Decimal(coord_tokens[0])
             longitude = Decimal(coord_tokens[1])
 
-            raid = raids.create_raid(pokemon, pokemon_number, raid_level, gym_name, end_time, latitude, longitude)
+            raid = raids.create_raid(pokemon, pokemon_number, raid_level, gym_name, end_time, latitude, longitude, hatch_time)
 
             if raid.id is None or (raid.is_egg and not message_is_egg):
 
@@ -306,7 +314,6 @@ async def on_message(message):
                 else:
                     result = await raids.build_raid_embed(raid)
 
-
                 raids.embed_map[raid.display_id] = result
 
                 if raid_was_egg:
@@ -323,7 +330,8 @@ async def on_message(message):
 
                     # Send the new embed to the private channel
                     if raid.private_channel is not None:
-                        private_raid_card = await client.send_message(raids.channel_map[raid.display_id], embed=raids.embed_map[raid.display_id])
+                        private_raid_card = await client.send_message(raids.channel_map[raid.display_id],
+                                                                      embed=raids.embed_map[raid.display_id])
                         raids.message_map[raid.display_id].append(private_raid_card)
 
             raid_embed = raids.embed_map[raid.display_id]
@@ -386,7 +394,8 @@ async def on_message(message):
                 if private_raid_channel is None:
                     private_raid_channel = await client.create_channel(discordServer,
                                                                        'raid-{}-chat'.format(raid.display_id),
-                                                                       (discordServer.default_role, private_channel_no_access),
+                                                                       (discordServer.default_role,
+                                                                        private_channel_no_access),
                                                                        (discordServer.me, private_channel_access))
                     raids.channel_map[raid.display_id] = private_raid_channel
 
@@ -406,7 +415,8 @@ async def on_message(message):
                     await client.edit_message(msg, embed=raids.embed_map[raid.display_id])
 
                 # Add the user to the private channel for the raid
-                await client.edit_channel_permissions(raids.channel_map[raid.display_id], author, private_channel_access)
+                await client.edit_channel_permissions(raids.channel_map[raid.display_id], author,
+                                                      private_channel_access)
                 await client.send_message(raids.channel_map[raid.display_id],
                                           '{}{}'.format(author.mention, resultTuple[0].details()))
 
@@ -437,7 +447,8 @@ async def on_message(message):
 
                 if displayMsg is not None:
                     # Remove the user to the private channel for the raid
-                    await client.edit_channel_permissions(raids.channel_map[raid.display_id], author, private_channel_no_access)
+                    await client.edit_channel_permissions(raids.channel_map[raid.display_id], author,
+                                                          private_channel_no_access)
                     await client.send_message(raids.channel_map[raid.display_id],
                                               '**{}** is no longer attending'.format(author.display_name))
 
@@ -681,7 +692,6 @@ async def background_cleanup():
             for raid in Raid.objects.filter(active=True):
                 raid.active = False
                 raid.save()
-
 
         await asyncio.sleep(60)  # task runs every 60 seconds
 
