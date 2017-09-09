@@ -32,12 +32,15 @@ class RaidManager:
             self.channel_map[raid.display_id] = discordServer.get_channel(raid.private_channel)
             self.message_map[raid.display_id] = []
             self.participant_map[raid.display_id] = set()
+
             if raid.is_egg:
                 self.embed_map[raid.display_id] = await self.build_egg_embed(raid)
             else:
                 self.embed_map[raid.display_id] = await self.build_raid_embed(raid)
+
             for participant in RaidParticipant.objects.filter(raid=raid, attending=True):
                 self.participant_map[raid.display_id].add(participant)
+
             for rm in RaidMessage.objects.filter(raid=raid):
                 try:
                     msg = await discordClient.get_message(discordServer.get_channel(rm.channel), rm.message)
@@ -45,9 +48,10 @@ class RaidManager:
                 except discord.errors.NotFound:
                     pass
 
-    def create_raid(self, pokemon_name, pokemon_number, raid_level, gym_name, expiration, latitude, longitude):
+    def create_raid(self, pokemon_name, pokemon_number, raid_level, gym_name, expiration, latitude, longitude, hatch_time):
         raid_result = Raid(pokemon_name=pokemon_name, pokemon_number=pokemon_number, raid_level=raid_level,
-                           gym_name=gym_name, expiration=expiration, latitude=latitude, longitude=longitude)
+                           gym_name=gym_name, expiration=expiration, latitude=latitude, longitude=longitude,
+                           hatch_time=hatch_time)
         hash_val = hash(raid_result)
         if hash_val in self.hashed_active_raids:
             raid_result = self.hashed_active_raids[hash_val]
@@ -151,7 +155,7 @@ class RaidManager:
         else:
             desc = '{}\n\n**Ends:** *{}*'.format(raid.gym_name, localtime(raid.expiration).strftime(time_format))
 
-        result = discord.Embed(title=raid.pokemon_name + ': Raid #' + str(raid.display_id), url=raid.data['url'],
+        result = discord.Embed(title='{}: Raid #{}'.format(raid.pokemon_name, raid.display_id), url=raid.data['url'],
                                description=desc, colour=embed_color)
 
         if 'image' in raid.data:
@@ -169,7 +173,7 @@ class RaidManager:
         return result
 
     async def build_egg_embed(self, raid):
-        desc = '{}\n\n**Hatches:** *{}*'.format(raid.gym_name, localtime(raid.expiration).strftime(time_format))
+        desc = '{}\n\n**Hatches:** *{}*'.format(raid.gym_name, localtime(raid.hatch_time).strftime(time_format))
 
         result = discord.Embed(title='Level {} egg: Raid #{}'.format(raid.raid_level, raid.display_id), url=raid.data['url'],
                                description=desc, colour=embed_color)
