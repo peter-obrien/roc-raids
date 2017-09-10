@@ -6,6 +6,7 @@ django.setup()
 import discord
 import asyncio
 import configparser
+import pytz
 from django.utils.timezone import make_aware, localtime
 from datetime import datetime, timedelta
 from decimal import *
@@ -258,19 +259,26 @@ async def on_message(message):
                                                                  minute=int(hatch_time_tokens[1]),
                                                                  second=0,
                                                                  microsecond=0)
-                end_time_tokens = attributes['ENDTIMERAID'].split(':')
+                time_remaining_tokens = attributes['TIMELEFT'].split(' ')
             else:
                 pokemon = attributes['POKEMON']
                 pokemon_number = attributes['POKEMON#']
                 quick_move = attributes['QUICKMOVE']
                 charge_move = attributes['CHARGEMOVE']
-                end_time_tokens = attributes['TIME'].split(':')
+                time_remaining_tokens = attributes['TIMELEFT'].split(' ')
                 hatch_time = None
 
-            end_time = make_aware(message.timestamp).replace(hour=int(end_time_tokens[0]),
-                                                             minute=int(end_time_tokens[1]),
-                                                             second=0,
-                                                             microsecond=0)
+            seconds_to_end = 0
+            for token in time_remaining_tokens:
+                if token.endswith('h'):
+                    seconds_to_end += int(token.rstrip('h')) * 60 * 60
+                elif token.endswith('m'):
+                    seconds_to_end += int(token.rstrip('m')) * 60
+                elif token.endswith('s'):
+                    seconds_to_end += int(token.rstrip('s'))
+
+            end_time = make_aware(message.timestamp, timezone=pytz.utc) + timedelta(seconds=seconds_to_end)
+            end_time = end_time.replace(microsecond=0)
 
             # Get the coordinate of the gym so we can determine which zone(s) it belongs to
             coord_tokens = the_embed['url'].split('=')[1].split(',')
