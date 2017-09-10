@@ -100,8 +100,8 @@ class RaidZone(models.Model):
     def filter(self, raid):
         if self.active:
             if self._isInRaidZone(raid):
-                if raid.is_egg and self.filter_eggs:
-                    return self._filter_raid_level(raid)
+                if raid.is_egg:
+                    return self.filter_eggs and self._filter_raid_level(raid)
                 else:
                     return self._filter_raid_level(raid) or self._filter_pokemon(raid)
         else:
