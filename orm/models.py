@@ -76,6 +76,7 @@ class RaidZone(models.Model):
     radius = models.DecimalField(max_digits=3, decimal_places=1, default=5.0)
     active = models.BooleanField(default=True)
     filter_eggs = models.BooleanField(default=True)
+    filter_pokemon_by_raid_level = models.BooleanField(default=True)
     filters = JSONField(default=filter_default)
 
     def __init__(self, *args, **kwargs):
@@ -97,13 +98,20 @@ class RaidZone(models.Model):
         else:
             return 'off'
 
+    @property
+    def pokemon_by_raid_level_status(self):
+        if self.filter_pokemon_by_raid_level:
+            return 'on'
+        else:
+            return 'off'
+
     def filter(self, raid):
         if self.active:
             if self._isInRaidZone(raid):
                 if raid.is_egg:
                     return self.filter_eggs and self._filter_raid_level(raid)
                 else:
-                    return self._filter_raid_level(raid) or self._filter_pokemon(raid)
+                    return (self.filter_pokemon_by_raid_level and self._filter_raid_level(raid)) or self._filter_pokemon(raid)
         else:
             return False
 

@@ -62,6 +62,7 @@ radius_command = commandChar + 'radius '
 filter_pokemon_command = commandChar + 'filter '
 filter_level_command = commandChar + 'level '
 egg_command = commandChar + 'eggs '
+filter_pokemon_by_raid_level_command = commandChar + 'monlevels '
 toggle_command = commandChar + 'zone '
 info_command = commandChar + 'info'
 
@@ -106,11 +107,13 @@ channelConfigMessage.add_field(name="{}pokemon_numbers".format(filter_pokemon_co
                                inline=False)
 channelConfigMessage.add_field(name="{}raid_levels".format(filter_level_command),
                                value="Allows for a comma separated list of raid levels to accept. E.g. `{}4,5`. Use `0` to clear the filter.".format(
-                                   filter_pokemon_command),
+                                   filter_level_command),
                                inline=False)
 channelConfigMessage.add_field(name="{}[on/off]".format(egg_command),
-                               value="Toggles whether this zone will receive raid eggs.".format(
-                                   filter_pokemon_command),
+                               value="Toggles whether this zone will receive raid eggs.",
+                               inline=False)
+channelConfigMessage.add_field(name="{}[on/off]".format(filter_pokemon_by_raid_level_command),
+                               value="Toggles whether this zone will have pokemon filtered by raid level. Use this if you only want to filter by pokemon number for non eggs.",
                                inline=False)
 channelConfigMessage.add_field(name="{}[on/off]".format(toggle_command),
                                value="Toggles if this raid zone is active or not.",
@@ -654,6 +657,27 @@ async def on_message(message):
                                               content='Setup has not been run for this channel.')
             finally:
                 await client.delete_message(message)
+        elif can_manage_channels and lowercase_message.startswith(filter_pokemon_by_raid_level_command):
+            try:
+                if message.channel.id in raid_zones.zones:
+                    rz = raid_zones.zones[message.channel.id]
+                    token = lowercase_message[len(filter_pokemon_by_raid_level_command):]
+                    if token == 'on':
+                        rz.filter_pokemon_by_raid_level = True
+                        rz.save()
+                        await client.send_message(message.channel, 'Pokemon filtering by raid level enabled.')
+                    elif token == 'off':
+                        rz.filter_pokemon_by_raid_level = False
+                        rz.save()
+                        await client.send_message(message.channel, 'Pokemon filtering by raid level disabled.')
+                    else:
+                        await client.send_message(message.channel, embed=channelConfigMessage,
+                                                  content='Unknown command: `{}`'.format(message.content))
+                else:
+                    await client.send_message(message.channel, embed=channelConfigMessage,
+                                              content='Setup has not been run for this channel.')
+            finally:
+                await client.delete_message(message)
         elif can_manage_channels and lowercase_message.startswith(toggle_command):
             if message.channel.id in raid_zones.zones:
                 rz = raid_zones.zones[message.channel.id]
@@ -678,8 +702,15 @@ async def on_message(message):
         elif can_manage_channels and lowercase_message == info_command:
             if message.channel.id in raid_zones.zones:
                 rz = raid_zones.zones[message.channel.id]
-                output = 'Here is the raid zone configuration for this channel:\n\nStatus: `{}`\nCoordinates: `{}, {}`\nRadius: `{}`\nEgg Notifications: `{}`\nLevels: `{}`\nPokemon: `{}`'.format(
-                    rz.status, rz.latitude, rz.longitude, rz.radius, rz.egg_status, rz.filters['raid_levels'], rz.filters['pokemon'])
+                output = '''Here is the raid zone configuration for this channel:
+Status: `{}`
+Coordinates: `{}, {}`
+Radius: `{}`
+Egg Notifications: `{}`
+Pokemon Filtering By Raid Level: `{}`
+Levels: `{}`
+Pokemon: `{}`'''.format(rz.status, rz.latitude, rz.longitude, rz.radius, rz.egg_status, rz.pokemon_by_raid_level_status,
+                        rz.filters['raid_levels'], rz.filters['pokemon'])
                 await client.send_message(message.channel, output)
             else:
                 await client.send_message(message.channel, 'This channel is not configured as a raid zone.')
