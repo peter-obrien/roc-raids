@@ -430,7 +430,11 @@ async def on_message(message):
                 # Add this user to the raid and update all the embeds for the raid.
                 resultTuple = raids.add_participant(raid, author.id, author.display_name, party_size, notes)
                 for msg in raids.message_map[raid.display_id]:
-                    await client.edit_message(msg, embed=raids.embed_map[raid.display_id])
+                    try:
+                        await client.edit_message(msg, embed=raids.embed_map[raid.display_id])
+                    except discord.errors.NotFound:
+                        raids.message_map[raid.display_id].remove(msg)
+                        pass
 
                 # Add the user to the private channel for the raid
                 await client.edit_channel_permissions(raids.channel_map[raid.display_id], author,
