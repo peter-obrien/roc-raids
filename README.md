@@ -41,3 +41,5 @@ Anytime code is updated, run `python manage.py migrate` to apply any possible ch
 ```
 python raid-coordinator.py
 ```
+## Donate
+If you'd like to support the work I've done feel free to [donate](https://www.paypal.me/peterobrien5)
