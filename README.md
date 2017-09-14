@@ -1,6 +1,3 @@
-# roc-raids
-Discord bot for Rochester, NY Pokemon Go raid coordination.
-
 ## Setup
 This bot uses [discord.py](https://github.com/Rapptz/discord.py) as such requires a version of Python that is compatible with the library.
 
@@ -25,12 +22,8 @@ Please run `python setup.py` to create a properties.ini file that needs to be po
 * `bot_token` This is the App Bot User Token for the bot. Can be found [here](https://discordapp.com/developers/applications/me).
 * `server_id` This is the ID for the discord server that the bot will run on.
 * `rsvp_channel_id` This is the ID of the channel where the RSVP messages will go.
-* `bot_only_channels` *(Optional)* Comma separate list of channel IDs where only bot commands are allowed. The bot will delete and PM users if invalid text is entered.
 * `raid_src_channel_id` This is the ID of the channel where PokeAlarm raids are processed. 
 * `raid_dest_channel_id` This is the ID of the channel where all parsed PokeAlarm raids will go.
-* `zones` *(Optional)* Comma separated list of raid zones to send parsed raids. Raid zones are a circle centered on a set of coordinates with a radius in kilometers.
-    * Basic format for a raid zone is `destination|latitude|longitude|radius`. After the radius additional arguments can be added to filter by the pokemon number of the raid boss.
-        * Pokemon filtering example `12345678900000|70.123456|-40.123456|10|150|151`
 
 #### Databases
 * `name` Name of the database to use.
@@ -48,3 +41,5 @@ Anytime code is updated, run `python manage.py migrate` to apply any possible ch
 ```
 python raid-coordinator.py
 ```
+## Donate
+If you'd like to support the work I've done feel free to [donate](https://www.paypal.me/peterobrien5)

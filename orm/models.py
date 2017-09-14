@@ -5,8 +5,8 @@ from math import sin, cos, sqrt, atan2, radians
 
 class Raid(models.Model):
     display_id = models.IntegerField()
-    pokemon_name = models.CharField(max_length=100)
-    pokemon_number = models.IntegerField()
+    pokemon_name = models.CharField(max_length=100, null=True)
+    pokemon_number = models.IntegerField(null=True)
     raid_level = models.IntegerField()
     gym_name = models.CharField(max_length=255)
     expiration = models.DateTimeField()
@@ -15,12 +15,14 @@ class Raid(models.Model):
     longitude = models.DecimalField(max_digits=9, decimal_places=6)
     data = JSONField()
     private_channel = models.CharField(max_length=64, null=True)
+    is_egg = models.BooleanField(default=False)
+    hatch_time = models.DateTimeField(null=True)
 
     def __hash__(self):
-        return hash((self.pokemon_name, self.latitude, self.longitude))
+        return hash((self.raid_level, self.latitude, self.longitude))
 
     def __eq__(self, other):
-        return (self.pokemon_name == other.pokemon_name
+        return (self.raid_level == other.raid_level
                 and self.latitude == other.latitude
                 and self.longitude == other.longitude)
 
@@ -73,6 +75,8 @@ class RaidZone(models.Model):
     longitude = models.DecimalField(max_digits=9, decimal_places=6)
     radius = models.DecimalField(max_digits=3, decimal_places=1, default=5.0)
     active = models.BooleanField(default=True)
+    filter_eggs = models.BooleanField(default=True)
+    filter_pokemon_by_raid_level = models.BooleanField(default=True)
     filters = JSONField(default=filter_default)
 
     def __init__(self, *args, **kwargs):
@@ -87,10 +91,27 @@ class RaidZone(models.Model):
         else:
             return 'off'
 
+    @property
+    def egg_status(self):
+        if self.filter_eggs:
+            return 'on'
+        else:
+            return 'off'
+
+    @property
+    def pokemon_by_raid_level_status(self):
+        if self.filter_pokemon_by_raid_level:
+            return 'on'
+        else:
+            return 'off'
+
     def filter(self, raid):
         if self.active:
             if self._isInRaidZone(raid):
-                return self._filter_pokemon(raid)
+                if raid.is_egg:
+                    return self.filter_eggs and self._filter_raid_level(raid)
+                else:
+                    return (self.filter_pokemon_by_raid_level and self._filter_raid_level(raid)) or self._filter_pokemon(raid)
         else:
             return False
 
@@ -122,4 +143,4 @@ class RaidZone(models.Model):
         if len(self.filters['raid_levels']) > 0:
             return int(raid.raid_level) in self.filters['raid_levels']
         else:
-            return False
+            return True
