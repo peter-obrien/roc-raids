@@ -14,6 +14,7 @@ log = logging.getLogger(__name__)
 
 initial_extensions = (
     'cogs.rsvp',
+    'cogs.admin'
 )
 
 propFilename = 'properties.ini'
