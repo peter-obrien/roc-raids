@@ -11,7 +11,7 @@ import aiohttp
 import sys
 from cogs.utils import context
 
-from raids import RaidManager
+from raids import RaidManager, RaidZoneManager
 
 description = """
 I'm a Pokemon Go raid coordinator
@@ -46,6 +46,7 @@ class RaidCoordinator(commands.AutoShardedBot):
 
         self.session = aiohttp.ClientSession(loop=self.loop)
         self.raids = RaidManager()
+        self.zones = RaidZoneManager()
 
         for extension in initial_extensions:
             try:
@@ -65,6 +66,8 @@ class RaidCoordinator(commands.AutoShardedBot):
             print(f'{error.original.__class__.__name__}: {error.original}', file=sys.stderr)
 
     async def on_ready(self):
+        await self.raids.load_from_database(self)
+        await self.zones.load_from_database(self)
         print(f'Ready: {self.user} (ID: {self.user.id})')
 
     async def on_resumed(self):
