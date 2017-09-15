@@ -1,5 +1,5 @@
 ## Setup
-This bot uses [discord.py](https://github.com/Rapptz/discord.py) as such requires a version of Python that is compatible with the library.
+This bot uses the [discord.py](https://github.com/Rapptz/discord.py/tree/rewrite) rewrite as such requires a version of Python that is compatible with the library.
 
 Before continuing, please follow their instructions to setup their library.
 
