@@ -20,7 +20,7 @@ class RaidManager:
         self.embed_map = dict()
         self.raid_seed = 0
 
-    async def load_from_database(self, discordClient, discordServer):
+    async def load_from_database(self, bot):
 
         last_raid_seed = Raid.objects.filter(active=True).aggregate(Max('display_id')).get('display_id__max')
         if last_raid_seed is not None:
@@ -29,7 +29,7 @@ class RaidManager:
         for raid in Raid.objects.filter(active=True):
             self.hashed_active_raids[hash(raid)] = raid
             self.raid_map[raid.display_id] = raid
-            self.channel_map[raid.display_id] = discordServer.get_channel(raid.private_channel)
+            self.channel_map[raid.display_id] = bot.get_channel(raid.private_channel)
             self.message_map[raid.display_id] = []
             self.participant_map[raid.display_id] = set()
 
@@ -43,7 +43,7 @@ class RaidManager:
 
             for rm in RaidMessage.objects.filter(raid=raid):
                 try:
-                    msg = await discordClient.get_message(discordServer.get_channel(rm.channel), rm.message)
+                    msg = await bot.get_channel(rm.channel).get_message(rm.message)
                     self.message_map[raid.display_id].append(msg)
                 except discord.errors.NotFound:
                     pass
@@ -212,11 +212,11 @@ class RaidZoneManager:
         self.zones[destination] = rz
         return rz
 
-    async def load_from_database(self, discordServer):
+    async def load_from_database(self, bot):
         for rz in RaidZone.objects.all():
-            channel = discordServer.get_channel(rz.destination)
+            channel = bot.get_channel(int(rz.destination))
             if channel is None:
-                channel = discordServer.get_member(rz.destination)
+                channel = bot.get_guild(rz.guild).get_member(int(rz.destination))
             if channel is not None:
                 rz.discord_destination = channel
                 self.zones[rz.destination] = rz
