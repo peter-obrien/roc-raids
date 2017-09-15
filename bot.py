@@ -1,10 +1,17 @@
-import configparser
+import os, django
 
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "settings")
+django.setup()
+
+import configparser
 from discord.ext import commands
 import logging
 import traceback
 import aiohttp
 import sys
+from cogs.utils import context
+
+from raids import RaidManager
 
 description = """
 I'm a Pokemon Go raid coordinator
@@ -26,8 +33,10 @@ if not botToken:
     print('bot_token is not set. Please update ' + propFilename)
     quit()
 
+
 def _prefix_callable(bot, msg):
     return '!'
+
 
 class RaidCoordinator(commands.AutoShardedBot):
     def __init__(self):
@@ -35,6 +44,7 @@ class RaidCoordinator(commands.AutoShardedBot):
                          pm_help=None, help_attrs=dict(hidden=True))
 
         self.session = aiohttp.ClientSession(loop=self.loop)
+        self.raids = RaidManager()
 
         for extension in initial_extensions:
             try:
@@ -59,6 +69,14 @@ class RaidCoordinator(commands.AutoShardedBot):
     async def on_resumed(self):
         print('resumed...')
 
+    async def process_commands(self, message):
+        ctx = await self.get_context(message, cls=context.Context)
+
+        if ctx.command is None:
+            return
+
+        await self.invoke(ctx)
+
     async def on_message(self, message):
         if message.author.bot:
             return
@@ -70,6 +88,7 @@ class RaidCoordinator(commands.AutoShardedBot):
 
     def run(self):
         super().run(botToken, reconnect=True)
+
 
 bot = RaidCoordinator()
 bot.run()
