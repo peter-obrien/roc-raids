@@ -41,6 +41,30 @@ class Zones:
             if isinstance(ctx.channel, discord.TextChannel):
                 await ctx.message.delete()
 
+    @commands.command()
+    @commands.guild_only()
+    @commands.has_permissions(manage_channels=True)
+    async def info(self, ctx):
+        try:
+            # TODO replace string with in after database migration
+            if str(ctx.channel.id) in ctx.zones.zones:
+                rz = ctx.zones.zones[str(ctx.channel.id)]
+                output = '''Here is the raid zone configuration for this channel:
+Status: `{}`
+Coordinates: `{}, {}`
+Radius: `{}`
+Egg Notifications: `{}`
+Pokemon Filtering By Raid Level: `{}`
+Levels: `{}`
+Pokemon: `{}`'''.format(rz.status, rz.latitude, rz.longitude, rz.radius, rz.egg_status,
+                                        rz.pokemon_by_raid_level_status,
+                                        rz.filters['raid_levels'], rz.filters['pokemon'])
+                await ctx.send(output)
+            else:
+                await ctx.send('This channel is not configured as a raid zone.')
+        finally:
+            if isinstance(ctx.channel, discord.TextChannel):
+                await ctx.message.delete()
 
 def setup(bot):
     bot.add_cog(Zones(bot))
