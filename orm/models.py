@@ -70,6 +70,7 @@ def filter_default():
 
 
 class RaidZone(models.Model):
+    server = models.BigIntegerField()
     destination = models.CharField(max_length=64)
     latitude = models.DecimalField(max_digits=9, decimal_places=6)
     longitude = models.DecimalField(max_digits=9, decimal_places=6)
