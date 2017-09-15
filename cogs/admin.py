@@ -12,15 +12,20 @@ class Admin:
     @commands.guild_only()
     async def clear(self, ctx, *msg_count_to_delete: str):
         if ctx.author == ctx.guild.owner:
-            print('{} is the owner, he/she does what they want!'.format(ctx.author.name))
-            if len(msg_count_to_delete) != 1 or not msg_count_to_delete[0].isdigit() or not isinstance(ctx.channel,
-                                                                                                       discord.TextChannel):
-                await ctx.send(content='Please only provide a number of messages to delete.')
+            if len(msg_count_to_delete) != 1 or not msg_count_to_delete[0].isdigit() or int(
+                    msg_count_to_delete[0]) > 100 or not isinstance(ctx.channel,
+                                                                    discord.TextChannel):
+                await ctx.send(content='Please only provide a number of messages to delete less than 100.')
             else:
-                message_to_delete = []
-                async for message in ctx.message.channel.history(limit=int(msg_count_to_delete[0])):
-                    message_to_delete.append(message)
-                await ctx.channel.delete_messages(message_to_delete)
+                try:
+                    message_to_delete = []
+                    async for message in ctx.message.channel.history(limit=int(msg_count_to_delete[0])):
+                        message_to_delete.append(message)
+                    await ctx.channel.delete_messages(message_to_delete)
+                except discord.HTTPException:
+                    # Assume that messages older than 14 days were found and delete one at a time.
+                    async for message in ctx.message.channel.history(limit=int(msg_count_to_delete[0])):
+                        await message.delete()
         else:
             raise commands.CommandInvokeError('User cannot run this command.')
 
