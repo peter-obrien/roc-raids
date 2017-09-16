@@ -47,13 +47,16 @@ class Zones:
             if len(value) == 1:
                 try:
                     radius = Decimal(value[0])
-                    if ctx.message.channel.id in ctx.zones.zones:
-                        rz = ctx.zones.zones[ctx.channel.id]
-                        rz.radius = radius
-                        rz.save()
-                        await ctx.send('Radius updated')
+                    if radius >= 1000.0:
+                        await ctx.send('Radius is too large.')
                     else:
-                        await ctx.send('Setup has not been run for this channel.')
+                        if ctx.message.channel.id in ctx.zones.zones:
+                            rz = ctx.zones.zones[ctx.channel.id]
+                            rz.radius = radius
+                            rz.save()
+                            await ctx.send('Radius updated')
+                        else:
+                            await ctx.send('Setup has not been run for this channel.')
                 except InvalidOperation:
                     await ctx.send('Invalid radius: {}'.format(value[0]))
             else:
