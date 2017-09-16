@@ -41,6 +41,10 @@ try:
 except ValueError:
     print('raid_src_channel_id is not a number.')
     quit()
+try:
+    test_message_id = config['DEFAULT']['test_message_id']
+except Exception as e:
+    test_message_id = None
 
 
 def _prefix_callable(bot, msg):
@@ -92,6 +96,12 @@ class RaidCoordinator(commands.AutoShardedBot):
     async def on_message(self, message):
         if message.author.bot:
             return
+
+        # Used for testing purposes
+        if message.content.startswith('!go') and test_message_id is not None:
+            await message.delete()
+            message = await message.channel.get_message(test_message_id)
+
         if message.channel.id == raid_src_id:
             await process_raid(self, message)
         else:
