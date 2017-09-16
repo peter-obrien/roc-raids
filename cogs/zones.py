@@ -34,9 +34,24 @@ class Zones:
     async def zone(self, ctx, *value: str):
         try:
             if len(value) == 1:
-                await ctx.send('zone command called with `{}`'.format(value[0]))
+                if ctx.channel.id in ctx.zones.zones:
+                    rz = ctx.zones.zones[ctx.channel.id]
+                    if value[0] == 'on':
+                        rz.active = True
+                        rz.save()
+                        await ctx.send('Raid messages enabled.')
+                    elif value[0] == 'off':
+                        rz.active = False
+                        rz.save()
+                        await ctx.send('Raid messages disabled.')
+                    else:
+                        await ctx.send('Unknown command: `{}`'.format(ctx.message.content))
+
+                else:
+                    await ctx.send('Setup has not been run for this channel.')
             else:
-                await ctx.send('Incorrect number of arguments to call `zone`')
+                await ctx.send(
+                    'Tried `{}` expected `!zone on/off`'.format(ctx.message.content))
         finally:
             if isinstance(ctx.channel, discord.TextChannel):
                 await ctx.message.delete()
@@ -56,14 +71,15 @@ Egg Notifications: `{}`
 Pokemon Filtering By Raid Level: `{}`
 Levels: `{}`
 Pokemon: `{}`'''.format(rz.status, rz.latitude, rz.longitude, rz.radius, rz.egg_status,
-                                        rz.pokemon_by_raid_level_status,
-                                        rz.filters['raid_levels'], rz.filters['pokemon'])
+                        rz.pokemon_by_raid_level_status,
+                        rz.filters['raid_levels'], rz.filters['pokemon'])
                 await ctx.send(output)
             else:
                 await ctx.send('This channel is not configured as a raid zone.')
         finally:
             if isinstance(ctx.channel, discord.TextChannel):
                 await ctx.message.delete()
+
 
 def setup(bot):
     bot.add_cog(Zones(bot))
