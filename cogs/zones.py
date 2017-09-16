@@ -147,7 +147,27 @@ Pokemon: `{}`'''.format(rz.status, rz.latitude, rz.longitude, rz.radius, rz.egg_
             else:
                 await ctx.send('Setup has not been run for this channel.')
         except ValueError:
-            print('Unable to process: {}'.format(ctx.message.content))
+            await ctx.send('Unable to process filter. Please verify your input: `{}`'.format(ctx.message.content))
+            pass
+
+    @commands.command()
+    @commands.guild_only()
+    @commands.has_permissions(manage_channels=True)
+    async def level(self, ctx, *values: str):
+        try:
+            if ctx.channel.id in ctx.zones.zones:
+                rz = ctx.zones.zones[ctx.channel.id]
+                new_filter = []
+                if '0' != values[0]:
+                    for raid_level in values:
+                        new_filter.append(int(raid_level))
+                rz.filters['raid_levels'].clear()
+                rz.filters['raid_levels'] = new_filter
+                rz.save()
+                await ctx.send('Updated raid level filter list')
+            else:
+                await ctx.send('Setup has not been run for this channel.')
+        except ValueError:
             await ctx.send('Unable to process filter. Please verify your input: `{}`'.format(ctx.message.content))
             pass
 
