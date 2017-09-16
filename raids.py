@@ -206,8 +206,8 @@ class RaidZoneManager:
     def __init__(self):
         self.zones = dict()
 
-    def create_zone(self, destination, latitude, longitude):
-        rz = RaidZone(destination=destination, latitude=latitude, longitude=longitude)
+    def create_zone(self, guild, destination, latitude, longitude):
+        rz = RaidZone(guild=guild, destination=destination, latitude=latitude, longitude=longitude)
         rz.save()
         self.zones[destination] = rz
         return rz

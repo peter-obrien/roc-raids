@@ -14,7 +14,27 @@ class Zones:
     @commands.has_permissions(manage_channels=True)
     async def setup(self, ctx, *coordinates: str):
         try:
-            print('setup called')
+            if len(coordinates) == 2:
+
+                try:
+                    latitude = Decimal(coordinates[0])
+                    longitude = Decimal(coordinates[1])
+
+                    if ctx.channel.id in ctx.zones.zones:
+                        rz = ctx.zones.zones[ctx.channel.id]
+                        rz.latitude = latitude
+                        rz.longitude = longitude
+                        rz.save()
+                        await ctx.send('Raid zone coordinates updated')
+                    else:
+                        rz = ctx.zones.create_zone(ctx.guild.id, ctx.channel.id, latitude, longitude)
+                        rz.discord_destination = ctx.channel
+                        await ctx.send('Raid zone created')
+                except Exception as e:
+                    print(e)
+                    await ctx.send('There was an error handling your request.\n\n`{}`'.format(ctx.message.content))
+            else:
+                await ctx.send('Tried `{}` expected `!setup latitude longitude`'.format(ctx.message.content))
         finally:
             if isinstance(ctx.channel, discord.TextChannel):
                 await ctx.message.delete()
