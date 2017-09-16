@@ -159,6 +159,11 @@ class RaidCoordinator(commands.AutoShardedBot):
 
             await self.process_commands(message)
 
+    async def on_guild_channel_delete(self, channel):
+        # If the channel was a raid zone, delete it.
+        if channel.id in self.zones.zones:
+            self.zones.zones[channel.id].delete()
+
     async def close(self):
         await super().close()
         await self.session.close()
