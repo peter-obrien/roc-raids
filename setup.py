@@ -1,6 +1,6 @@
 import configparser
 filename = 'properties.ini'
-defaultValues = {'bot_token': '','server_id': '', 'rsvp_channel_id': '', 'raid_src_channel_id':'', 'raid_dest_channel_id':'', 'command_character':'!'}
+defaultValues = {'bot_token': '','server_id': '', 'rsvp_channel_id': '', 'raid_src_channel_id':'', 'command_character':'!'}
 databaseValues = {'ENGINE': 'django.db.backends.postgresql', 'NAME': '','USER': '', 'PASSWORD': ''}
 securityValues = {'SECRET_KEY': ''}
 config = configparser.ConfigParser()
