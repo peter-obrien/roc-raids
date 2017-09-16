@@ -97,6 +97,8 @@ class RaidCoordinator(commands.AutoShardedBot):
             print(f'In {ctx.command.qualified_name}:', file=sys.stderr)
             traceback.print_tb(error.original.__traceback__)
             print(f'{error.original.__class__.__name__}: {error.original}', file=sys.stderr)
+        elif isinstance(error, commands.BadArgument):
+            await ctx.author.send(str(error))
 
     async def on_ready(self):
         self.bot_guild = self.get_guild(guild_id)
