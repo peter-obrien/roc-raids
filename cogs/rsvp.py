@@ -8,21 +8,17 @@ class Rsvp:
     def __init__(self, bot):
         self.bot = bot
 
+    async def __after_invoke(self, ctx):
+        if isinstance(ctx.channel, discord.TextChannel):
+            await ctx.message.delete()
+
     @commands.command()
     async def join(self, ctx, *raid_id: str):
-        try:
-            print('join called')
-        finally:
-            if isinstance(ctx.channel, discord.TextChannel):
-                await ctx.message.delete()
+        print('join called')
 
     @commands.command()
     async def leave(self, ctx, *raid_id: str):
-        try:
-            print('leave called')
-        finally:
-            if isinstance(ctx.channel, discord.TextChannel):
-                await ctx.message.delete()
+        print('leave called')
 
 
 def setup(bot):
