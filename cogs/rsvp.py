@@ -32,8 +32,8 @@ class Rsvp:
             notes = ' '.join(str(x) for x in join_details[2:])
         try:
             # If the message is coming from PM we want to use the server's version of the user.
-            if isinstance(ctx.channel, discord.TextChannel):
-                author = ctx.bot_guild.get_member(ctx.author.id)
+            if isinstance(ctx.channel, discord.abc.PrivateChannel):
+                author = ctx.bot_guild.get_member(author.id)
 
             raid = ctx.raids.get_raid(user_raid_id)
 
@@ -70,7 +70,7 @@ class Rsvp:
             await raid.private_discord_channel.send('{}{}'.format(author.mention, result_tuple[0].details()))
 
             # Send message to the RSVP channel if the command was invoked publicly
-            if isinstance(ctx.channel, discord.TextChannel):
+            if isinstance(ctx.channel, discord.abc.GuildChannel):
                 await ctx.rsvp_channel.send(result_tuple[1])
 
         except commands.BadArgument as err:
@@ -78,7 +78,32 @@ class Rsvp:
 
     @commands.command()
     async def leave(self, ctx, *raid_id: str):
-        print('leave called')
+        if len(raid_id) == 0:
+            raise commands.BadArgument('Please provide the number for the raid that you wish to attend.')
+        elif len(raid_id) > 1:
+            raise commands.TooManyArguments('Please only provide a raid id to this command.')
+
+        user_raid_id = raid_id[0]
+        author = ctx.author
+        try:
+            # If the message is coming from PM we want to use the server's version of the user.
+            if isinstance(ctx.channel, discord.abc.PrivateChannel):
+                author = ctx.bot_guild.get_member(author.id)
+
+            raid = ctx.raids.get_raid(user_raid_id)
+            display_msg = ctx.raids.remove_participant(raid, author.id, author.display_name)
+
+            if display_msg is not None:
+                # Remove the user to the private channel for the raid
+                await raid.private_discord_channel.set_permissions(author, overwrite=None)
+                await raid.private_discord_channel.send('**{}** is no longer attending'.format(author.display_name))
+
+                for msg in raid.messages:
+                    await msg.edit(embed=raid.embed)
+                if isinstance(ctx.channel, discord.abc.GuildChannel):
+                    await ctx.rsvp_channel.send(display_msg)
+        except commands.BadArgument as err:
+            await author.send(str(err))
 
 
 def setup(bot):
