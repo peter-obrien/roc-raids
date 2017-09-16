@@ -171,6 +171,25 @@ Pokemon: `{}`'''.format(rz.status, rz.latitude, rz.longitude, rz.radius, rz.egg_
             await ctx.send('Unable to process filter. Please verify your input: `{}`'.format(ctx.message.content))
             pass
 
+    @commands.command()
+    @commands.guild_only()
+    @commands.has_permissions(manage_channels=True)
+    async def monlevels(self, ctx, *value: str):
+        if ctx.channel.id in ctx.zones.zones:
+            rz = ctx.zones.zones[ctx.channel.id]
+            if value[0].lower() == 'on':
+                rz.filter_pokemon_by_raid_level = True
+                rz.save()
+                await ctx.send('Pokemon filtering by raid level enabled.')
+            elif value[0].lower() == 'off':
+                rz.filter_pokemon_by_raid_level = False
+                rz.save()
+                await ctx.send('Pokemon filtering by raid level disabled.')
+            else:
+                raise commands.BadArgument('Unable to process argument `{}` for `{}`'.format(value[0], ctx.command))
+        else:
+            await ctx.send('Setup has not been run for this channel.')
+
 
 def setup(bot):
     bot.add_cog(Zones(bot))
