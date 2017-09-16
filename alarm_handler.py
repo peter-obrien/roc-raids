@@ -14,7 +14,7 @@ async def process_raid(bot, message):
 
     the_embed = message.embeds[0]
 
-    body = the_embed['description'].split('}{')
+    body = the_embed.description.split('}{')
     attributes = dict()
     for token in body:
         key_and_value = token.split('::')
@@ -37,7 +37,7 @@ async def process_raid(bot, message):
             seconds_to_end += int(token.rstrip('m')) * 60
         elif token.endswith('s'):
             seconds_to_end += int(token.rstrip('s'))
-    end_time = make_aware(message.timestamp, timezone=pytz.utc) + timedelta(seconds=seconds_to_end)
+    end_time = make_aware(message.created_at, timezone=pytz.utc) + timedelta(seconds=seconds_to_end)
     end_time = end_time.replace(microsecond=0)
 
     if message_is_egg:
@@ -55,7 +55,7 @@ async def process_raid(bot, message):
                 seconds_to_end += int(token.rstrip('m')) * 60
             elif token.endswith('s'):
                 seconds_to_end += int(token.rstrip('s'))
-        hatch_time = make_aware(message.timestamp, timezone=pytz.utc) + timedelta(seconds=seconds_to_end)
+        hatch_time = make_aware(message.created_at, timezone=pytz.utc) + timedelta(seconds=seconds_to_end)
         hatch_time = hatch_time.replace(microsecond=0)
     else:
         pokemon = attributes['POKEMON']
@@ -65,7 +65,7 @@ async def process_raid(bot, message):
         hatch_time = None
 
     # Get the coordinate of the gym so we can determine which zone(s) it belongs to
-    coord_tokens = the_embed['url'].split('=')[1].split(',')
+    coord_tokens = the_embed.url.split('=')[1].split(',')
     latitude = Decimal(coord_tokens[0])
     longitude = Decimal(coord_tokens[1])
 
@@ -81,22 +81,22 @@ async def process_raid(bot, message):
             data['charge_move'] = charge_move
         if quick_move is not None:
             data['quick_move'] = quick_move
-        data['url'] = the_embed['url']
+        data['url'] = the_embed.url
 
         image = dict()
-        image_content = the_embed['image']
-        image['url'] = image_content['url']
-        image['height'] = image_content['height']
-        image['width'] = image_content['width']
-        image['proxy_url'] = image_content['proxy_url']
+        image_content = the_embed.image
+        image['url'] = image_content.url
+        image['height'] = image_content.height
+        image['width'] = image_content.width
+        image['proxy_url'] = image_content.proxy_url
         data['image'] = image
 
         thumbnail = dict()
-        thumbnail_content = the_embed['thumbnail']
-        thumbnail['url'] = thumbnail_content['url']
-        thumbnail['height'] = thumbnail_content['height']
-        thumbnail['width'] = thumbnail_content['width']
-        thumbnail['proxy_url'] = thumbnail_content['proxy_url']
+        thumbnail_content = the_embed.thumbnail
+        thumbnail['url'] = thumbnail_content.url
+        thumbnail['height'] = thumbnail_content.height
+        thumbnail['width'] = thumbnail_content.width
+        thumbnail['proxy_url'] = thumbnail_content.proxy_url
         data['thumbnail'] = thumbnail
 
         raid.data = data
