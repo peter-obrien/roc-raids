@@ -13,12 +13,11 @@ class RaidManager:
         self.hashed_active_raids = dict()
         self.raid_map = dict()
         self.raid_seed = 0
-
-    async def load_from_database(self, bot):
-
         last_raid_seed = Raid.objects.filter(active=True).aggregate(Max('display_id')).get('display_id__max')
         if last_raid_seed is not None:
             self.raid_seed = last_raid_seed
+
+    async def load_from_database(self, bot):
 
         for raid in Raid.objects.filter(active=True):
             self.hashed_active_raids[hash(raid)] = raid
