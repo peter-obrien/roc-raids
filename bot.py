@@ -88,6 +88,12 @@ class RaidCoordinator(commands.AutoShardedBot):
     async def process_commands(self, message):
         ctx = await self.get_context(message, cls=context.Context)
 
+        # Make base commands case insensitive
+        if ctx.prefix is not None:
+            command = ctx.invoked_with
+            if command:
+                ctx.command = self.get_command(command.lower())
+
         if ctx.command is None:
             return
 
