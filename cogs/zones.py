@@ -46,9 +46,8 @@ class Zones:
     @commands.has_permissions(manage_channels=True)
     async def info(self, ctx):
         try:
-            # TODO replace string with in after database migration
-            if str(ctx.channel.id) in ctx.zones.zones:
-                rz = ctx.zones.zones[str(ctx.channel.id)]
+            if ctx.channel.id in ctx.zones.zones:
+                rz = ctx.zones.zones[ctx.channel.id]
                 output = '''Here is the raid zone configuration for this channel:
 Status: `{}`
 Coordinates: `{}, {}`
