@@ -109,6 +109,15 @@ class Rsvp:
         msg = ctx.raids.get_participant_printout(raid)
         await ctx.author.send(msg)
 
+    @commands.command(aliases=['raid'])
+    async def details(self, ctx, *raid_id: str):
+        if len(raid_id) == 0:
+            raise commands.BadArgument('Please specify what raid you want.')
+
+        user_raid_id = raid_id[0]
+        raid = ctx.raids.get_raid(user_raid_id)
+        await ctx.author.send(embed=raid.embed)
+
 
 def setup(bot):
     bot.add_cog(Rsvp(bot))
