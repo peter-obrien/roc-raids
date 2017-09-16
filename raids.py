@@ -34,8 +34,12 @@ class RaidManager:
 
             for rm in RaidMessage.objects.filter(raid=raid):
                 try:
-                    msg = await bot.get_channel(rm.channel).get_message(rm.message)
-                    raid.messages.append(msg)
+                    channel = bot.get_channel(rm.channel)
+                    if channel is not None:
+                        msg = await channel.get_message(rm.message)
+                        raid.messages.append(msg)
+                    else:
+                        print('Could not find channel raid message {}'.format(rm.id))
                 except discord.errors.NotFound:
                     pass
 
