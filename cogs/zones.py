@@ -1,4 +1,5 @@
 import discord
+from decimal import Decimal, InvalidOperation
 from discord.ext import commands
 
 
@@ -23,7 +24,20 @@ class Zones:
     @commands.has_permissions(manage_channels=True)
     async def radius(self, ctx, *value: str):
         try:
-            print('radius called')
+            if len(value) == 1:
+                try:
+                    radius = Decimal(value[0])
+                    if ctx.message.channel.id in ctx.zones.zones:
+                        rz = ctx.zones.zones[ctx.channel.id]
+                        rz.radius = radius
+                        rz.save()
+                        await ctx.send('Radius updated')
+                    else:
+                        await ctx.send('Setup has not been run for this channel.')
+                except InvalidOperation:
+                    await ctx.send('Invalid radius: {}'.format(value[0]))
+            else:
+                await ctx.send('Tried `{}` expected `!radius xxx.x`'.format(ctx.message.content))
         finally:
             if isinstance(ctx.channel, discord.TextChannel):
                 await ctx.message.delete()
