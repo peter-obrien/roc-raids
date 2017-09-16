@@ -14,7 +14,7 @@ class Raid(models.Model):
     latitude = models.DecimalField(max_digits=9, decimal_places=6)
     longitude = models.DecimalField(max_digits=9, decimal_places=6)
     data = JSONField()
-    private_channel = models.CharField(max_length=64, null=True)
+    private_channel = models.BigIntegerField(null=True)
     is_egg = models.BooleanField(default=False)
     hatch_time = models.DateTimeField(null=True)
 
@@ -29,13 +29,13 @@ class Raid(models.Model):
 
 class RaidMessage(models.Model):
     raid = models.ForeignKey(Raid, on_delete=models.CASCADE)
-    channel = models.CharField(max_length=64)
-    message = models.CharField(max_length=64)
+    channel = models.BigIntegerField()
+    message = models.BigIntegerField()
 
 
 class RaidParticipant(models.Model):
     raid = models.ForeignKey(Raid, on_delete=models.CASCADE)
-    user_id = models.CharField(max_length=64)
+    user_id = models.BigIntegerField()
     user_name = models.CharField(max_length=255)
     party_size = models.IntegerField(default=1)
     notes = models.CharField(max_length=255, null=True)
@@ -71,7 +71,7 @@ def filter_default():
 
 class RaidZone(models.Model):
     guild = models.BigIntegerField()
-    destination = models.CharField(max_length=64)
+    destination = models.BigIntegerField()
     latitude = models.DecimalField(max_digits=9, decimal_places=6)
     longitude = models.DecimalField(max_digits=9, decimal_places=6)
     radius = models.DecimalField(max_digits=3, decimal_places=1, default=5.0)
