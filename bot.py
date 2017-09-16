@@ -134,17 +134,18 @@ class RaidCoordinator(commands.AutoShardedBot):
         await self.invoke(ctx)
 
     async def on_message(self, message):
-        if message.author.bot:
-            return
 
         # Used for testing purposes
         if message.content.startswith('!go') and test_message_id is not None:
             await message.delete()
             message = await message.channel.get_message(test_message_id)
 
-        if message.channel.id == raid_src_id:
+        if message.channel.id == raid_src_id and message.author.bot:
             await process_raid(self, message)
         else:
+            if message.author.bot:
+                return
+
             await self.process_commands(message)
 
     async def close(self):
