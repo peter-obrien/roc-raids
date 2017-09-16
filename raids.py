@@ -1,5 +1,3 @@
-from math import sin, cos, sqrt, atan2, radians
-
 from orm.models import Raid, RaidParticipant, RaidMessage, RaidZone
 from errors import InputError
 import discord
@@ -48,7 +46,8 @@ class RaidManager:
                 except discord.errors.NotFound:
                     pass
 
-    def create_raid(self, pokemon_name, pokemon_number, raid_level, gym_name, expiration, latitude, longitude, hatch_time):
+    def create_raid(self, pokemon_name, pokemon_number, raid_level, gym_name, expiration, latitude, longitude,
+                    hatch_time):
         raid_result = Raid(pokemon_name=pokemon_name, pokemon_number=pokemon_number, raid_level=raid_level,
                            gym_name=gym_name, expiration=expiration, latitude=latitude, longitude=longitude,
                            hatch_time=hatch_time)
@@ -175,7 +174,8 @@ class RaidManager:
     async def build_egg_embed(self, raid):
         desc = '{}\n\n**Hatches:** *{}*'.format(raid.gym_name, localtime(raid.hatch_time).strftime(time_format))
 
-        result = discord.Embed(title='Level {} egg: Raid #{}'.format(raid.raid_level, raid.display_id), url=raid.data['url'],
+        result = discord.Embed(title='Level {} egg: Raid #{}'.format(raid.raid_level, raid.display_id),
+                               url=raid.data['url'],
                                description=desc, colour=embed_color)
 
         if 'image' in raid.data:
@@ -223,3 +223,18 @@ class RaidZoneManager:
             else:
                 print('Unable to load raid zone for id {} destination {}'.format(rz.id, rz.destination))
 
+    async def send_to_raid_zones(self, raid):
+        objects_to_save = []
+        for rz in self.zones.values():
+            if rz.filter(raid):
+                try:
+                    raid_message = await rz.discord_destination.send(embed=raid.embed)
+                    if not isinstance(rz.discord_destination, discord.member.Member):
+                        objects_to_save.append(
+                            RaidMessage(raid=raid, channel=raid_message.channel.id, message=raid_message.id))
+                        raid.messages.append(raid_message)
+                except discord.errors.Forbidden:
+                    print('Unable to send raid to channel {}. The bot does not have permission.'.format(
+                        rz.discord_destination.name))
+                    pass
+        return objects_to_save
