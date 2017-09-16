@@ -35,11 +35,27 @@ if not config['DEFAULT']['bot_token']:
 elif not config['DEFAULT']['raid_src_channel_id']:
     print('raid_src_channel_id is not set. Please update ' + propFilename)
     quit()
+elif not config['DEFAULT']['server_id']:
+    print('server_id is not set. Please update ' + propFilename)
+    quit()
+elif not config['DEFAULT']['rsvp_channel_id']:
+    print('rsvp_channel_id is not set. Please update ' + propFilename)
+    quit()
 bot_token = config['DEFAULT']['bot_token']
 try:
     raid_src_id = int(config['DEFAULT']['raid_src_channel_id'])
 except ValueError:
     print('raid_src_channel_id is not a number.')
+    quit()
+try:
+    guild_id = int(config['DEFAULT']['server_id'])
+except ValueError:
+    print('server_id is not a number.')
+    quit()
+try:
+    rsvp_channel_id = int(config['DEFAULT']['rsvp_channel_id'])
+except ValueError:
+    print('rsvp_channel_id is not a number.')
     quit()
 try:
     test_message_id = config['DEFAULT']['test_message_id']
@@ -59,6 +75,8 @@ class RaidCoordinator(commands.AutoShardedBot):
         self.session = aiohttp.ClientSession(loop=self.loop)
         self.raids = RaidManager()
         self.zones = RaidZoneManager()
+        self.bot_guild = None
+        self.rsvp_channel = None
 
         for extension in initial_extensions:
             try:
@@ -78,6 +96,8 @@ class RaidCoordinator(commands.AutoShardedBot):
             print(f'{error.original.__class__.__name__}: {error.original}', file=sys.stderr)
 
     async def on_ready(self):
+        self.bot_guild = self.get_guild(guild_id)
+        self.rsvp_channel = self.bot_guild.get_channel(rsvp_channel_id)
         await self.raids.load_from_database(self)
         await self.zones.load_from_database(self)
         print(f'Ready: {self.user} (ID: {self.user.id})')
