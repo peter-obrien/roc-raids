@@ -12,10 +12,6 @@ class RaidManager:
     def __init__(self):
         self.hashed_active_raids = dict()
         self.raid_map = dict()
-        self.message_map = dict()
-        self.participant_map = dict()
-        self.channel_map = dict()
-        self.embed_map = dict()
         self.raid_seed = 0
 
     async def load_from_database(self, bot):
@@ -27,22 +23,20 @@ class RaidManager:
         for raid in Raid.objects.filter(active=True):
             self.hashed_active_raids[hash(raid)] = raid
             self.raid_map[raid.display_id] = raid
-            self.channel_map[raid.display_id] = bot.get_channel(raid.private_channel)
-            self.message_map[raid.display_id] = []
-            self.participant_map[raid.display_id] = set()
+            raid.private_discord_channel = bot.get_channel(raid.private_channel)
 
             if raid.is_egg:
-                self.embed_map[raid.display_id] = await self.build_egg_embed(raid)
+                raid.embed = await self.build_egg_embed(raid)
             else:
-                self.embed_map[raid.display_id] = await self.build_raid_embed(raid)
+                raid.embed = await self.build_raid_embed(raid)
 
             for participant in RaidParticipant.objects.filter(raid=raid, attending=True):
-                self.participant_map[raid.display_id].add(participant)
+                raid.participants.add(participant)
 
             for rm in RaidMessage.objects.filter(raid=raid):
                 try:
                     msg = await bot.get_channel(rm.channel).get_message(rm.message)
-                    self.message_map[raid.display_id].append(msg)
+                    raid.messages.append(msg)
                 except discord.errors.NotFound:
                     pass
 
@@ -61,18 +55,16 @@ class RaidManager:
         raid.display_id = self.raid_seed
         self.hashed_active_raids[hash(raid)] = raid
         self.raid_map[raid.display_id] = raid
-        self.message_map[raid.display_id] = []
-        self.participant_map[raid.display_id] = set()
         raid.save()
         return raid
 
     def remove_raid(self, raid):
+        raid.embed = None
+        raid.messages = None
+        raid.participants = None
+        raid.private_discord_channel = None
         self.hashed_active_raids.pop(hash(raid), None)
         self.raid_map.pop(raid.display_id, None)
-        self.message_map.pop(raid.display_id, None)
-        self.participant_map.pop(raid.display_id, None)
-        self.channel_map.pop(raid.display_id, None)
-        self.embed_map.pop(raid.display_id, None)
 
     def get_raid(self, raid_id_str):
         if not raid_id_str.isdigit():
@@ -95,14 +87,14 @@ class RaidManager:
         party_size = int(party_size)
         participant = RaidParticipant(raid=raid, user_id=user_id, user_name=user_name, party_size=party_size,
                                       notes=notes)
-        already_in_raid = participant in self.participant_map[raid.display_id]
+        already_in_raid = participant in raid.participants
         if already_in_raid:
-            self.participant_map[raid.display_id].remove(participant)
+            raid.participants.remove(participant)
             participant = RaidParticipant.objects.get(raid=raid, user_id=user_id)
             participant.party_size = party_size
             participant.notes = notes
         participant.save()
-        self.participant_map[raid.display_id].add(participant)
+        raid.participants.add(participant)
 
         self.update_embed_participants(raid)
         party_descriptor = (' +{} '.format(str(party_size - 1)) if party_size > 1 else '')
@@ -119,30 +111,30 @@ class RaidManager:
 
     def remove_participant(self, raid, user_id, user_name):
         temp_raider = RaidParticipant(raid=raid, user_id=user_id)
-        if temp_raider in self.participant_map[raid.display_id]:
+        if temp_raider in raid.participants:
             temp_raider = RaidParticipant.objects.get(raid=raid, user_id=user_id, attending=True)
             temp_raider.attending = False
             temp_raider.save()
 
-            self.participant_map[raid.display_id].remove(temp_raider)
+            raid.participants.remove(temp_raider)
             self.update_embed_participants(raid)
             return '{} is no longer attending Raid #{}'.format(user_name, raid.display_id)
         else:
             return None
 
     def update_embed_participants(self, raid):
-        self.embed_map[raid.display_id].set_footer(text='Participants: ' + str(self.get_participant_number(raid)))
+        raid.embed.set_footer(text='Participants: ' + str(self.get_participant_number(raid)))
 
     def get_participant_number(self, raid):
         result = 0
-        for participant in self.participant_map[raid.display_id]:
+        for participant in raid.participants:
             result += participant.party_size
         return result
 
     def get_participant_printout(self, raid):
         result = 'Here are the ' + str(self.get_participant_number(raid)) + ' participants for Raid #' + str(
             raid.display_id) + ':'
-        for raider in self.participant_map[raid.display_id]:
+        for raider in raid.participants:
             result += '\n\t' + str(raider)
         return result
 
@@ -195,10 +187,6 @@ class RaidManager:
     def reset(self):
         self.hashed_active_raids.clear()
         self.raid_map.clear()
-        self.message_map.clear()
-        self.participant_map.clear()
-        self.channel_map.clear()
-        self.embed_map.clear()
         self.raid_seed = 1
 
 

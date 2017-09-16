@@ -18,6 +18,17 @@ class Raid(models.Model):
     is_egg = models.BooleanField(default=False)
     hatch_time = models.DateTimeField(null=True)
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        self.embed = None
+        # Holds all the embed messages for the raid
+        self.messages = []
+        # Holds all the people currently attending the raid
+        self.participants = set()
+        # Discord object for the private_channel
+        self.private_discord_channel = None
+
     def __hash__(self):
         return hash((self.raid_level, self.latitude, self.longitude))
 
