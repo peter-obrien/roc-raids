@@ -10,8 +10,8 @@ import traceback
 import aiohttp
 import sys
 from cogs.utils import context
-
 from raids import RaidManager, RaidZoneManager
+from alarm_handler import process_raid
 
 description = """
 I'm a Pokemon Go raid coordinator
@@ -25,13 +25,21 @@ initial_extensions = (
     'cogs.zones'
 )
 
+# Process startup configurations
 propFilename = 'properties.ini'
 config = configparser.ConfigParser()
 config.read(propFilename)
-botToken = config['DEFAULT']['bot_token']
-
-if not botToken:
+if not config['DEFAULT']['bot_token']:
     print('bot_token is not set. Please update ' + propFilename)
+    quit()
+elif not config['DEFAULT']['raid_src_channel_id']:
+    print('raid_src_channel_id is not set. Please update ' + propFilename)
+    quit()
+bot_token = config['DEFAULT']['bot_token']
+try:
+    raid_src_id = int(config['DEFAULT']['raid_src_channel_id'])
+except ValueError:
+    print('raid_src_channel_id is not a number.')
     quit()
 
 
@@ -84,14 +92,17 @@ class RaidCoordinator(commands.AutoShardedBot):
     async def on_message(self, message):
         if message.author.bot:
             return
-        await self.process_commands(message)
+        if message.channel.id == raid_src_id:
+            await process_raid(self, message)
+        else:
+            await self.process_commands(message)
 
     async def close(self):
         await super().close()
         await self.session.close()
 
     def run(self):
-        super().run(botToken, reconnect=True)
+        super().run(bot_token, reconnect=True)
 
 
 bot = RaidCoordinator()
