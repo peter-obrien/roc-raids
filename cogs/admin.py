@@ -29,6 +29,15 @@ class Admin:
         else:
             raise commands.CommandInvokeError('User cannot run this command.')
 
+    @commands.command()
+    async def logout(self, ctx, *msg_count_to_delete: str):
+        if ctx.bot.is_owner(ctx.author):
+            print('Logout command invoked. Shutting down.')
+            await ctx.message.delete()
+            await ctx.bot.logout()
+        else:
+            raise commands.CommandInvokeError('User cannot run this command.')
+
 
 def setup(bot):
     bot.add_cog(Admin(bot))
