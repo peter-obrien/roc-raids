@@ -7,13 +7,18 @@ import configparser
 import logging
 import traceback
 import aiohttp
+import asyncio
 import sys
+import discord
 
 from discord.ext import commands
-from orm.models import BotOnlyChannel
+from orm.models import BotOnlyChannel, Raid
 from cogs.utils import context
 from raids import RaidManager, RaidZoneManager
 from alarm_handler import process_raid
+from datetime import timedelta
+from django.db import transaction
+from django.utils import timezone
 
 description = """
 I'm a Pokemon Go raid coordinator
@@ -80,6 +85,10 @@ class RaidCoordinator(commands.AutoShardedBot):
         self.bot_guild = None
         self.rsvp_channel = None
         self.bot_only_channels = []
+        self.reset_date = timezone.localdate(timezone.now()) + timedelta(hours=24)
+
+        # create the background task and run it in the background
+        self.bg_task = self.loop.create_task(self.background_cleanup())
 
         for extension in initial_extensions:
             try:
@@ -156,6 +165,47 @@ class RaidCoordinator(commands.AutoShardedBot):
 
     def run(self):
         super().run(bot_token, reconnect=True)
+
+    async def background_cleanup(self):
+        await self.wait_until_ready()
+
+        while not self.is_closed():
+            expired_raids = []
+            current_time = timezone.localtime(timezone.now())
+            current_date = timezone.localdate(current_time)
+
+            # Find expired raids
+            with transaction.atomic():
+                for raid in self.raids.raid_map.values():
+                    if current_time > raid.expiration:
+                        raid.active = False
+                        raid.save()
+                        expired_raids.append(raid)
+            # Process expired raids
+            for raid in expired_raids:
+                for message in raid.messages:
+                    try:
+                        await message.delete()
+                    except discord.errors.NotFound:
+                        pass
+                if raid.private_discord_channel is not None:
+                    try:
+                        await raid.private_discord_channel.delete()
+                    except discord.errors.NotFound:
+                        pass
+                self.raids.remove_raid(raid)
+
+            # Check to see if the raid manager needs to be reset
+            if current_date == self.reset_date:
+                # Get the next reset time.
+                self.reset_date = self.reset_date + timedelta(hours=24)
+                self.raids.reset()
+                # Clean up any raids that may still be active in the database
+                for raid in Raid.objects.filter(active=True):
+                    raid.active = False
+                    raid.save()
+
+            await asyncio.sleep(60)  # task runs every 60 seconds
 
 
 bot = RaidCoordinator()
