@@ -105,6 +105,20 @@ class Rsvp:
         except commands.BadArgument as err:
             await author.send(str(err))
 
+    @commands.command()
+    async def who(self, ctx, *raid_id: str):
+        if len(raid_id) == 0:
+            ctx.author.send('Raid id not provided to who command.')
+            return
+
+        user_raid_id = raid_id[0]
+        try:
+            raid = ctx.raids.get_raid(user_raid_id)
+            msg = ctx.raids.get_participant_printout(raid)
+            await ctx.author.send(msg)
+        except commands.BadArgument as err:
+            await ctx.author.send(str(err))
+
 
 def setup(bot):
     bot.add_cog(Rsvp(bot))
