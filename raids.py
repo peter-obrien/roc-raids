@@ -1,5 +1,5 @@
+from discord.ext import commands
 from orm.models import Raid, RaidParticipant, RaidMessage, RaidZone
-from errors import InputError
 import discord
 from django.utils.timezone import localtime
 from django.db.models import Max
@@ -68,20 +68,20 @@ class RaidManager:
 
     def get_raid(self, raid_id_str):
         if not raid_id_str.isdigit():
-            raise InputError('Raid #{} does not exist.'.format(raid_id_str))
+            raise commands.BadArgument('Raid #{} does not exist.'.format(raid_id_str))
 
         raid_id_int = int(raid_id_str)
 
         if raid_id_int not in self.raid_map:
             if raid_id_int <= self.raid_seed:
-                raise InputError('Raid #{} has expired.'.format(raid_id_str))
+                raise commands.BadArgument('Raid #{} has expired.'.format(raid_id_str))
             else:
-                raise InputError('Raid #{} does not exist.'.format(raid_id_str))
+                raise commands.BadArgument('Raid #{} does not exist.'.format(raid_id_str))
         return self.raid_map[raid_id_int]
 
     def add_participant(self, raid, user_id, user_name, party_size='1', notes=None):
         if not party_size.isdigit():
-            raise InputError(
+            raise commands.BadArgument(
                 "The party size entered [{}] is not a number. If you're attending alone, please use 1.".format(
                     party_size))
         party_size = int(party_size)
