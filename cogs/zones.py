@@ -87,6 +87,27 @@ class Zones:
     @commands.command()
     @commands.guild_only()
     @commands.has_permissions(manage_channels=True)
+    async def eggs(self, ctx, *value: str):
+        if ctx.channel.id in ctx.zones.zones:
+            rz = ctx.zones.zones[ctx.channel.id]
+            if len(value) > 1:
+                raise commands.TooManyArguments('`{}{} [on/off]`'.format(ctx.prefix, ctx.command))
+            if value[0].lower() == 'on':
+                rz.filter_eggs = True
+                rz.save()
+                await ctx.send('Egg notifications enabled.')
+            elif value[0].lower() == 'off':
+                rz.filter_eggs = False
+                rz.save()
+                await ctx.send('Egg notifications disabled.')
+            else:
+                raise commands.BadArgument('Unable to process argument `{}` for `{}`'.format(value[0], ctx.command))
+        else:
+            await ctx.send('Setup has not been run for this channel.')
+
+    @commands.command()
+    @commands.guild_only()
+    @commands.has_permissions(manage_channels=True)
     async def info(self, ctx):
         if ctx.channel.id in ctx.zones.zones:
             rz = ctx.zones.zones[ctx.channel.id]
