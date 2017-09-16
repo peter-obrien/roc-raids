@@ -1,6 +1,8 @@
 import discord
 from discord.ext import commands
 
+from orm.models import BotOnlyChannel
+
 
 class Admin:
     """Commands for the owner, admins, and mods."""
@@ -37,6 +39,25 @@ class Admin:
             await ctx.bot.logout()
         else:
             raise commands.CommandInvokeError('User cannot run this command.')
+
+    @commands.command()
+    @commands.guild_only()
+    async def botonly(self, ctx, *value: str):
+        toggle_value = value[0]
+        if toggle_value == 'on':
+            if ctx.channel not in ctx.bot.bot_only_channels:
+                boc = BotOnlyChannel(channel=ctx.channel.id)
+                boc.save()
+                ctx.bot.bot_only_channels.append(ctx.channel)
+            await ctx.send('Bot only commands enabled.')
+        elif toggle_value == 'off':
+            if ctx.channel in ctx.bot.bot_only_channels:
+                boc = BotOnlyChannel.objects.get(channel=ctx.channel.id)
+                boc.delete()
+                ctx.bot.bot_only_channels.remove(ctx.channel)
+            await ctx.send('Bot only commands disabled.')
+        else:
+            await ctx.send('Command to change bot only status:\n\n`{}[on/off]`'.format(ctx.command))
 
 
 def setup(bot):
