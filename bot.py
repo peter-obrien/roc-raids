@@ -4,11 +4,13 @@ os.environ.setdefault("DJANGO_SETTINGS_MODULE", "settings")
 django.setup()
 
 import configparser
-from discord.ext import commands
 import logging
 import traceback
 import aiohttp
 import sys
+
+from discord.ext import commands
+from orm.models import BotOnlyChannel
 from cogs.utils import context
 from raids import RaidManager, RaidZoneManager
 from alarm_handler import process_raid
@@ -77,6 +79,7 @@ class RaidCoordinator(commands.AutoShardedBot):
         self.zones = RaidZoneManager()
         self.bot_guild = None
         self.rsvp_channel = None
+        self.bot_only_channels = []
 
         for extension in initial_extensions:
             try:
@@ -98,6 +101,12 @@ class RaidCoordinator(commands.AutoShardedBot):
     async def on_ready(self):
         self.bot_guild = self.get_guild(guild_id)
         self.rsvp_channel = self.bot_guild.get_channel(rsvp_channel_id)
+
+        for boc in BotOnlyChannel.objects.all():
+            channel = self.bot_guild.get_channel(boc.channel)
+            if channel is not None:
+                self.bot_only_channels.append(channel)
+
         await self.raids.load_from_database(self)
         await self.zones.load_from_database(self)
         print(f'Ready: {self.user} (ID: {self.user.id})')
@@ -113,6 +122,11 @@ class RaidCoordinator(commands.AutoShardedBot):
             command = ctx.invoked_with
             if command:
                 ctx.command = self.get_command(command.lower())
+
+        if ctx.prefix is None and ctx.channel in self.bot_only_channels:
+            await ctx.author.send('Only bot commands may be used in this channel.')
+            await ctx.message.delete()
+            return
 
         if ctx.command is None:
             return

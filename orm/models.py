@@ -73,7 +73,7 @@ class RaidParticipant(models.Model):
 
 
 class BotOnlyChannel(models.Model):
-    channel = models.CharField(max_length=64)
+    channel = models.BigIntegerField()
 
 
 def filter_default():
