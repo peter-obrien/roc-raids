@@ -57,7 +57,7 @@ class Admin:
             await ctx.send('Command to change bot only status:\n\n`{}[on/off]`'.format(ctx.command))
 
     @botonly.after_invoke
-    async def after_foo_command(self, ctx):
+    async def after_botonly_command(self, ctx):
         await ctx.message.delete()
 
 
