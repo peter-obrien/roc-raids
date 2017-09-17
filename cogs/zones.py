@@ -4,7 +4,7 @@ from discord.ext import commands
 
 
 class Zones:
-    """Reservation system"""
+    """Raid zone setup and configuration. To invoke user must have Manage Channels permission."""
 
     def __init__(self, bot):
         self.bot = bot
@@ -13,7 +13,7 @@ class Zones:
         if isinstance(ctx.channel, discord.TextChannel):
             await ctx.message.delete()
 
-    @commands.command()
+    @commands.command(hidden=True)
     @commands.guild_only()
     @commands.has_permissions(manage_channels=True)
     async def setup(self, ctx, *coordinates: str):
@@ -38,7 +38,7 @@ class Zones:
         else:
             await ctx.send('Tried `{}` expected `!setup latitude longitude`'.format(ctx.message.content))
 
-    @commands.command()
+    @commands.command(hidden=True)
     @commands.guild_only()
     @commands.has_permissions(manage_channels=True)
     async def radius(self, ctx, *value: str):
@@ -60,7 +60,7 @@ class Zones:
         else:
             await ctx.send('Tried `{}` expected `!radius xxx.x`'.format(ctx.message.content))
 
-    @commands.command()
+    @commands.command(hidden=True)
     @commands.guild_only()
     @commands.has_permissions(manage_channels=True)
     async def zone(self, ctx, *value: str):
@@ -84,7 +84,7 @@ class Zones:
             await ctx.send(
                 'Tried `{}` expected `!zone on/off`'.format(ctx.message.content))
 
-    @commands.command()
+    @commands.command(hidden=True)
     @commands.guild_only()
     @commands.has_permissions(manage_channels=True)
     async def eggs(self, ctx, *value: str):
@@ -105,7 +105,7 @@ class Zones:
         else:
             await ctx.send('Setup has not been run for this channel.')
 
-    @commands.command()
+    @commands.command(hidden=True)
     @commands.guild_only()
     @commands.has_permissions(manage_channels=True)
     async def info(self, ctx):
@@ -125,7 +125,7 @@ Pokemon: `{}`'''.format(rz.status, rz.latitude, rz.longitude, rz.radius, rz.egg_
         else:
             await ctx.send('This channel is not configured as a raid zone.')
 
-    @commands.command()
+    @commands.command(hidden=True)
     @commands.guild_only()
     @commands.has_permissions(manage_channels=True)
     async def filter(self, ctx, *values: str):
@@ -150,7 +150,7 @@ Pokemon: `{}`'''.format(rz.status, rz.latitude, rz.longitude, rz.radius, rz.egg_
             await ctx.send('Unable to process filter. Please verify your input: `{}`'.format(ctx.message.content))
             pass
 
-    @commands.command()
+    @commands.command(hidden=True)
     @commands.guild_only()
     @commands.has_permissions(manage_channels=True)
     async def level(self, ctx, *values: str):
@@ -171,7 +171,7 @@ Pokemon: `{}`'''.format(rz.status, rz.latitude, rz.longitude, rz.radius, rz.egg_
             await ctx.send('Unable to process filter. Please verify your input: `{}`'.format(ctx.message.content))
             pass
 
-    @commands.command()
+    @commands.command(hidden=True)
     @commands.guild_only()
     @commands.has_permissions(manage_channels=True)
     async def monlevels(self, ctx, *value: str):
