@@ -35,7 +35,7 @@ class Admin:
         await ctx.message.delete()
         await ctx.bot.logout()
 
-    @commands.command(hidden=True)
+    @commands.command(hidden=True, usage='on/off')
     @commands.guild_only()
     @commands.has_permissions(manage_channels=True)
     async def botonly(self, ctx, value: str):
