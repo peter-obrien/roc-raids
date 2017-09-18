@@ -77,7 +77,7 @@ def _prefix_callable(bot, msg):
 class RaidCoordinator(commands.AutoShardedBot):
     def __init__(self):
         super().__init__(command_prefix=_prefix_callable, description=description,
-                         pm_help=None, help_attrs=dict(hidden=True))
+                         pm_help=True, help_attrs=dict(hidden=True))
 
         self.session = aiohttp.ClientSession(loop=self.loop)
         self.raids = RaidManager()
@@ -108,6 +108,10 @@ class RaidCoordinator(commands.AutoShardedBot):
             print(f'{error.original.__class__.__name__}: {error.original}', file=sys.stderr)
         elif isinstance(error, commands.BadArgument):
             await ctx.author.send(str(error))
+        elif isinstance(error, commands.MissingRequiredArgument):
+            await ctx.author.send('Missing required argument for: {}'.format(ctx.command))
+            await ctx.show_help(command=ctx.command)
+            await ctx.message.delete()
 
     async def on_ready(self):
         self.bot_guild = self.get_guild(guild_id)
