@@ -16,92 +16,82 @@ class Zones:
     @commands.command(hidden=True)
     @commands.guild_only()
     @commands.has_permissions(manage_channels=True)
-    async def setup(self, ctx, *coordinates: str):
-        if len(coordinates) == 2:
-            try:
-                latitude = Decimal(coordinates[0])
-                longitude = Decimal(coordinates[1])
+    async def setup(self, ctx, latitude: str, longitude: str):
+        try:
+            lat = Decimal(latitude)
+            lon = Decimal(longitude)
 
-                if ctx.channel.id in ctx.zones.zones:
-                    rz = ctx.zones.zones[ctx.channel.id]
-                    rz.latitude = latitude
-                    rz.longitude = longitude
-                    rz.save()
-                    await ctx.send('Raid zone coordinates updated')
-                else:
-                    rz = ctx.zones.create_zone(ctx.guild.id, ctx.channel.id, latitude, longitude)
-                    rz.discord_destination = ctx.channel
-                    await ctx.send('Raid zone created')
-            except Exception as e:
-                print(e)
-                await ctx.send('There was an error handling your request.\n\n`{}`'.format(ctx.message.content))
-        else:
-            await ctx.send('Tried `{}` expected `!setup latitude longitude`'.format(ctx.message.content))
-
-    @commands.command(hidden=True)
-    @commands.guild_only()
-    @commands.has_permissions(manage_channels=True)
-    async def radius(self, ctx, *value: str):
-        if len(value) == 1:
-            try:
-                radius = Decimal(value[0])
-                if radius >= 1000.0:
-                    await ctx.send('Radius is too large.')
-                else:
-                    if ctx.message.channel.id in ctx.zones.zones:
-                        rz = ctx.zones.zones[ctx.channel.id]
-                        rz.radius = radius
-                        rz.save()
-                        await ctx.send('Radius updated')
-                    else:
-                        await ctx.send('Setup has not been run for this channel.')
-            except InvalidOperation:
-                await ctx.send('Invalid radius: {}'.format(value[0]))
-        else:
-            await ctx.send('Tried `{}` expected `!radius xxx.x`'.format(ctx.message.content))
-
-    @commands.command(hidden=True)
-    @commands.guild_only()
-    @commands.has_permissions(manage_channels=True)
-    async def zone(self, ctx, *value: str):
-        if len(value) == 1:
             if ctx.channel.id in ctx.zones.zones:
                 rz = ctx.zones.zones[ctx.channel.id]
-                if value[0] == 'on':
-                    rz.active = True
-                    rz.save()
-                    await ctx.send('Raid messages enabled.')
-                elif value[0] == 'off':
-                    rz.active = False
-                    rz.save()
-                    await ctx.send('Raid messages disabled.')
-                else:
-                    await ctx.send('Unknown command: `{}`'.format(ctx.message.content))
-
+                rz.latitude = lat
+                rz.longitude = lon
+                rz.save()
+                await ctx.send('Raid zone coordinates updated')
             else:
-                await ctx.send('Setup has not been run for this channel.')
-        else:
-            await ctx.send(
-                'Tried `{}` expected `!zone on/off`'.format(ctx.message.content))
+                rz = ctx.zones.create_zone(ctx.guild.id, ctx.channel.id, lat, lon)
+                rz.discord_destination = ctx.channel
+                await ctx.send('Raid zone created')
+        except Exception as e:
+            print(e)
+            await ctx.send('There was an error handling your request.\n\n`{}`'.format(ctx.message.content))
+
+    @commands.command(hidden=True, usage='xxx.x')
+    @commands.guild_only()
+    @commands.has_permissions(manage_channels=True)
+    async def radius(self, ctx, value: str):
+        try:
+            radius = Decimal(value)
+            if radius >= 1000.0:
+                await ctx.send('Radius is too large.')
+            else:
+                if ctx.message.channel.id in ctx.zones.zones:
+                    rz = ctx.zones.zones[ctx.channel.id]
+                    rz.radius = radius
+                    rz.save()
+                    await ctx.send('Radius updated')
+                else:
+                    await ctx.send('Setup has not been run for this channel.')
+        except InvalidOperation:
+            raise commands.BadArgument('Invalid radius: {}'.format(value))
 
     @commands.command(hidden=True)
     @commands.guild_only()
     @commands.has_permissions(manage_channels=True)
-    async def eggs(self, ctx, *value: str):
+    async def zone(self, ctx, value: str):
+        """Toggles if this raid zone is active or not."""
         if ctx.channel.id in ctx.zones.zones:
             rz = ctx.zones.zones[ctx.channel.id]
-            if len(value) > 1:
-                raise commands.TooManyArguments('`{}{} [on/off]`'.format(ctx.prefix, ctx.command))
-            if value[0].lower() == 'on':
+            if value == 'on':
+                rz.active = True
+                rz.save()
+                await ctx.send('Raid messages enabled.')
+            elif value == 'off':
+                rz.active = False
+                rz.save()
+                await ctx.send('Raid messages disabled.')
+            else:
+                raise commands.BadArgument('Unable to process argument `{}` for `{}`'.format(value, ctx.command))
+
+        else:
+            await ctx.send('Setup has not been run for this channel.')
+
+    @commands.command(hidden=True, usage='on/off')
+    @commands.guild_only()
+    @commands.has_permissions(manage_channels=True)
+    async def eggs(self, ctx, value: str):
+        """Toggles whether this zone will receive raid eggs."""
+        if ctx.channel.id in ctx.zones.zones:
+            rz = ctx.zones.zones[ctx.channel.id]
+            if value.lower() == 'on':
                 rz.filter_eggs = True
                 rz.save()
                 await ctx.send('Egg notifications enabled.')
-            elif value[0].lower() == 'off':
+            elif value.lower() == 'off':
                 rz.filter_eggs = False
                 rz.save()
                 await ctx.send('Egg notifications disabled.')
             else:
-                raise commands.BadArgument('Unable to process argument `{}` for `{}`'.format(value[0], ctx.command))
+                raise commands.BadArgument('Unable to process argument `{}` for `{}`'.format(value, ctx.command))
         else:
             await ctx.send('Setup has not been run for this channel.')
 
@@ -109,6 +99,7 @@ class Zones:
     @commands.guild_only()
     @commands.has_permissions(manage_channels=True)
     async def info(self, ctx):
+        """Displays the raid zones configuration for a channel."""
         if ctx.channel.id in ctx.zones.zones:
             rz = ctx.zones.zones[ctx.channel.id]
             output = '''Here is the raid zone configuration for this channel:
@@ -128,17 +119,17 @@ Pokemon: `{}`'''.format(rz.status, rz.latitude, rz.longitude, rz.radius, rz.egg_
     @commands.command(hidden=True)
     @commands.guild_only()
     @commands.has_permissions(manage_channels=True)
-    async def filter(self, ctx, *values: str):
-        user_list = values
+    async def filter(self, ctx, *pokemon_numbers: str):
+        """Allows for a list of pokemon numbers to enable filtering. Use `0` to clear the filter."""
+        if len(pokemon_numbers) == 0:
+            await ctx.author('Please provide at least one pokemon number for command `{}`'.format(ctx.command))
+            return
         try:
             if ctx.channel.id in ctx.zones.zones:
                 rz = ctx.zones.zones[ctx.channel.id]
                 new_filter = []
-                if len(user_list) == 1:
-                    if '0' != user_list[0]:
-                        new_filter.append(int(user_list[0]))
-                else:
-                    for raid_level in user_list:
+                if pokemon_numbers[0] != '0':
+                    for raid_level in pokemon_numbers:
                         new_filter.append(int(raid_level))
                 rz.filters['pokemon'].clear()
                 rz.filters['pokemon'] = sorted(new_filter)
@@ -153,13 +144,17 @@ Pokemon: `{}`'''.format(rz.status, rz.latitude, rz.longitude, rz.radius, rz.egg_
     @commands.command(hidden=True)
     @commands.guild_only()
     @commands.has_permissions(manage_channels=True)
-    async def level(self, ctx, *values: str):
+    async def level(self, ctx, *raid_levels: str):
+        """Allows for a list of raid levels to accept. Use `0` to clear the filter."""
+        if len(raid_levels) == 0:
+            await ctx.author('Please provide at least one raid level for command `{}`'.format(ctx.command))
+            return
         try:
             if ctx.channel.id in ctx.zones.zones:
                 rz = ctx.zones.zones[ctx.channel.id]
                 new_filter = []
-                if '0' != values[0]:
-                    for raid_level in values:
+                if '0' != raid_levels[0]:
+                    for raid_level in raid_levels:
                         new_filter.append(int(raid_level))
                 rz.filters['raid_levels'].clear()
                 rz.filters['raid_levels'] = new_filter
@@ -171,22 +166,23 @@ Pokemon: `{}`'''.format(rz.status, rz.latitude, rz.longitude, rz.radius, rz.egg_
             await ctx.send('Unable to process filter. Please verify your input: `{}`'.format(ctx.message.content))
             pass
 
-    @commands.command(hidden=True)
+    @commands.command(hidden=True, usage='on/off')
     @commands.guild_only()
     @commands.has_permissions(manage_channels=True)
-    async def monlevels(self, ctx, *value: str):
+    async def monlevels(self, ctx, value: str):
+        """Toggles whether this zone will have pokemon filtered by raid level. Use this if you only want to filter by pokemon number for non eggs."""
         if ctx.channel.id in ctx.zones.zones:
             rz = ctx.zones.zones[ctx.channel.id]
-            if value[0].lower() == 'on':
+            if value.lower() == 'on':
                 rz.filter_pokemon_by_raid_level = True
                 rz.save()
                 await ctx.send('Pokemon filtering by raid level enabled.')
-            elif value[0].lower() == 'off':
+            elif value.lower() == 'off':
                 rz.filter_pokemon_by_raid_level = False
                 rz.save()
                 await ctx.send('Pokemon filtering by raid level disabled.')
             else:
-                raise commands.BadArgument('Unable to process argument `{}` for `{}`'.format(value[0], ctx.command))
+                raise commands.BadArgument('Unable to process argument `{}` for `{}`'.format(value, ctx.command))
         else:
             await ctx.send('Setup has not been run for this channel.')
 
