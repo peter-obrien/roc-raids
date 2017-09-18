@@ -93,7 +93,7 @@ class RaidManager:
         already_in_raid = participant in raid.participants
         if already_in_raid:
             raid.participants.remove(participant)
-            participant = RaidParticipant.objects.get(raid=raid, user_id=user_id)
+            participant = RaidParticipant.objects.get(raid=raid, user_id=user_id, attending=True)
             participant.party_size = party_size
             participant.notes = notes
         participant.save()
