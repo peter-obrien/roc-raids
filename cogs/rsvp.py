@@ -18,24 +18,20 @@ class Rsvp:
             await ctx.message.delete()
 
     @commands.command()
-    async def join(self, ctx, *join_details: str):
-        if len(join_details) == 0:
-            raise commands.BadArgument('Please provide the number for the raid that you wish to attend.')
+    async def join(self, ctx, raid_id: str, party_size: str = '1', *notes: str):
+        """Used to indicate that you wish to attend a raid. Can also provide the size of your party (including you) and any notes."""
 
-        user_raid_id = join_details[0]
-        party_size = '1'
-        notes = None
         author = ctx.author
-        if len(join_details) > 1:
-            party_size = join_details[1]
-        if len(join_details) > 2:
-            notes = ' '.join(str(x) for x in join_details[2:])
+        if len(notes) == 0:
+            notes = None
+        else:
+            notes = ' '.join(str(x) for x in notes)
 
         # If the message is coming from PM we want to use the server's version of the user.
         if isinstance(ctx.channel, discord.abc.PrivateChannel):
             author = ctx.bot_guild.get_member(author.id)
 
-        raid = ctx.raids.get_raid(user_raid_id)
+        raid = ctx.raids.get_raid(raid_id)
 
         private_raid_channel = raid.private_discord_channel
         if private_raid_channel is None:
@@ -74,19 +70,15 @@ class Rsvp:
             await ctx.rsvp_channel.send(result_tuple[1])
 
     @commands.command()
-    async def leave(self, ctx, *raid_id: str):
-        if len(raid_id) == 0:
-            raise commands.BadArgument('Please provide the number for the raid that you wish to leave.')
-        elif len(raid_id) > 1:
-            raise commands.TooManyArguments('Please only provide a raid id to this command.')
+    async def leave(self, ctx, raid_id: str):
+        """Used to indicate to others that you are no longer attending the indicated raid."""
 
-        user_raid_id = raid_id[0]
         author = ctx.author
         # If the message is coming from PM we want to use the server's version of the user.
         if isinstance(ctx.channel, discord.abc.PrivateChannel):
             author = ctx.bot_guild.get_member(author.id)
 
-        raid = ctx.raids.get_raid(user_raid_id)
+        raid = ctx.raids.get_raid(raid_id)
         display_msg = ctx.raids.remove_participant(raid, author.id, author.display_name)
 
         if display_msg is not None:
@@ -100,22 +92,16 @@ class Rsvp:
                 await ctx.rsvp_channel.send(display_msg)
 
     @commands.command()
-    async def who(self, ctx, *raid_id: str):
-        if len(raid_id) == 0:
-            raise commands.BadArgument('Raid id not provided to who command.')
-
-        user_raid_id = raid_id[0]
-        raid = ctx.raids.get_raid(user_raid_id)
+    async def who(self, ctx, raid_id: str):
+        """Used to get a listing of who is attend the provided raid."""
+        raid = ctx.raids.get_raid(raid_id)
         msg = ctx.raids.get_participant_printout(raid)
         await ctx.author.send(msg)
 
     @commands.command(aliases=['raid'])
-    async def details(self, ctx, *raid_id: str):
-        if len(raid_id) == 0:
-            raise commands.BadArgument('Please specify what raid you want.')
-
-        user_raid_id = raid_id[0]
-        raid = ctx.raids.get_raid(user_raid_id)
+    async def details(self, ctx, raid_id: str):
+        """Used to get the raid card PM to you by the bot. Useful for quickly learning the location of a particular raid."""
+        raid = ctx.raids.get_raid(raid_id)
         await ctx.author.send(embed=raid.embed)
 
 
