@@ -10,12 +10,13 @@ import aiohttp
 import asyncio
 import sys
 import discord
+import alarm_handler
+import gymhuntr_handler
 
 from discord.ext import commands
 from orm.models import BotOnlyChannel, Raid
 from cogs.utils import context
 from raids import RaidManager, RaidZoneManager
-from alarm_handler import process_raid
 from datetime import timedelta
 from django.db import transaction
 from django.utils import timezone
@@ -156,7 +157,9 @@ class RaidCoordinator(commands.AutoShardedBot):
             message = await message.channel.get_message(test_message_id)
 
         if message.channel.id == raid_src_id and message.author.bot:
-            await process_raid(self, message)
+            await alarm_handler.process_raid(self, message)
+        elif message.author.id == 329412230481444886:
+            await gymhuntr_handler.process_raid(self, message)
         else:
             if message.author.bot:
                 return
