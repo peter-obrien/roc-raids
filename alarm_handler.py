@@ -109,7 +109,6 @@ async def process_raid(bot, message):
         else:
             raid.pokemon_name = pokemon
             raid.pokemon_number = pokemon_number
-            raid.expiration = end_time
             raid.save()
 
         if raid.is_egg:
