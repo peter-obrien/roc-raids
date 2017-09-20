@@ -163,3 +163,4 @@ class GuildConfig(models.Model):
     alarm_source = models.BigIntegerField()
     rsvp_channel = models.BigIntegerField()
     command = models.CharField(max_length=1)
+    time_zone = models.CharField(max_length=50)
