@@ -1,5 +1,5 @@
 ## Setup
-This bot uses [discord.py](https://github.com/Rapptz/discord.py) as such requires a version of Python that is compatible with the library.
+This bot uses the [discord.py](https://github.com/Rapptz/discord.py/tree/rewrite) rewrite as such requires a version of Python that is compatible with the library.
 
 Before continuing, please follow their instructions to setup their library.
 
@@ -23,7 +23,6 @@ Please run `python setup.py` to create a properties.ini file that needs to be po
 * `server_id` This is the ID for the discord server that the bot will run on.
 * `rsvp_channel_id` This is the ID of the channel where the RSVP messages will go.
 * `raid_src_channel_id` This is the ID of the channel where PokeAlarm raids are processed. 
-* `raid_dest_channel_id` This is the ID of the channel where all parsed PokeAlarm raids will go.
 
 #### Databases
 * `name` Name of the database to use.
@@ -39,7 +38,7 @@ Anytime code is updated, run `python manage.py migrate` to apply any possible ch
 
 ## Steps to Run
 ```
-python raid-coordinator.py
+python bot.py
 ```
 ## Donate
 If you'd like to support the work I've done feel free to [donate](https://www.paypal.me/peterobrien5)

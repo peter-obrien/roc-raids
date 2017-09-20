@@ -14,9 +14,20 @@ class Raid(models.Model):
     latitude = models.DecimalField(max_digits=9, decimal_places=6)
     longitude = models.DecimalField(max_digits=9, decimal_places=6)
     data = JSONField()
-    private_channel = models.CharField(max_length=64, null=True)
+    private_channel = models.BigIntegerField(null=True)
     is_egg = models.BooleanField(default=False)
     hatch_time = models.DateTimeField(null=True)
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        self.embed = None
+        # Holds all the embed messages for the raid
+        self.messages = []
+        # Holds all the people currently attending the raid
+        self.participants = set()
+        # Discord object for the private_channel
+        self.private_discord_channel = None
 
     def __hash__(self):
         return hash((self.raid_level, self.latitude, self.longitude))
@@ -29,13 +40,13 @@ class Raid(models.Model):
 
 class RaidMessage(models.Model):
     raid = models.ForeignKey(Raid, on_delete=models.CASCADE)
-    channel = models.CharField(max_length=64)
-    message = models.CharField(max_length=64)
+    channel = models.BigIntegerField()
+    message = models.BigIntegerField()
 
 
 class RaidParticipant(models.Model):
     raid = models.ForeignKey(Raid, on_delete=models.CASCADE)
-    user_id = models.CharField(max_length=64)
+    user_id = models.BigIntegerField()
     user_name = models.CharField(max_length=255)
     party_size = models.IntegerField(default=1)
     notes = models.CharField(max_length=255, null=True)
@@ -62,7 +73,7 @@ class RaidParticipant(models.Model):
 
 
 class BotOnlyChannel(models.Model):
-    channel = models.CharField(max_length=64)
+    channel = models.BigIntegerField()
 
 
 def filter_default():
@@ -70,10 +81,11 @@ def filter_default():
 
 
 class RaidZone(models.Model):
-    destination = models.CharField(max_length=64)
+    guild = models.BigIntegerField()
+    destination = models.BigIntegerField()
     latitude = models.DecimalField(max_digits=9, decimal_places=6)
     longitude = models.DecimalField(max_digits=9, decimal_places=6)
-    radius = models.DecimalField(max_digits=3, decimal_places=1, default=5.0)
+    radius = models.DecimalField(max_digits=4, decimal_places=1, default=5.0)
     active = models.BooleanField(default=True)
     filter_eggs = models.BooleanField(default=True)
     filter_pokemon_by_raid_level = models.BooleanField(default=True)
