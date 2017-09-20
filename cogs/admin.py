@@ -61,6 +61,42 @@ class Admin:
         await ctx.message.delete()
 
     @commands.command(hidden=True)
+    @commands.guild_only()
+    async def set_rsvp(self, ctx):
+        """Make the channel where the command is run the guild RSVP output channel."""
+        if ctx.author == ctx.guild.owner:
+            print('Setting RSVP channel to {}'.format(ctx.channel.id))
+        else:
+            raise commands.CommandInvokeError('User cannot run this command.')
+
+    @commands.command(hidden=True)
+    @commands.guild_only()
+    async def set_alarm_source(self, ctx):
+        """Make the channel where the command is run the source channel of Pokemon Alarm notification."""
+        if ctx.author == ctx.guild.owner:
+            print('Setting alarm source channel to {}'.format(ctx.channel.id))
+        else:
+            raise commands.CommandInvokeError('User cannot run this command.')
+
+    @commands.command(hidden=True)
+    @commands.guild_only()
+    async def set_time_zone(self, ctx, time_zone):
+        """Change the time zone in which the raid end times display."""
+        if ctx.author == ctx.guild.owner:
+            print('Setting time zone to {}'.format(time_zone))
+        else:
+            raise commands.CommandInvokeError('User cannot run this command.')
+
+    @commands.command(hidden=True)
+    @commands.guild_only()
+    async def set_command(self, ctx, char):
+        """Changes the character to invoke commands."""
+        if ctx.author == ctx.guild.owner:
+            print('Setting command character to `{}`'.format(char))
+        else:
+            raise commands.CommandInvokeError('User cannot run this command.')
+
+    @commands.command(hidden=True)
     async def debug(self, ctx):
         """Prints out diagnostic information regarding this bot's configuration."""
         if ctx.author == ctx.guild.owner:
