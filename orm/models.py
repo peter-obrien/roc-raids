@@ -156,3 +156,10 @@ class RaidZone(models.Model):
             return int(raid.raid_level) in self.filters['raid_levels']
         else:
             return True
+
+
+class GuildConfig(models.Model):
+    guild = models.BigIntegerField()
+    alarm_source = models.BigIntegerField()
+    rsvp_channel = models.BigIntegerField()
+    command = models.CharField(max_length=1)
