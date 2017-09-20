@@ -60,6 +60,23 @@ class Admin:
     async def after_botonly_command(self, ctx):
         await ctx.message.delete()
 
+    @commands.command(hidden=True)
+    async def debug(self, ctx):
+        """Prints out diagnostic information regarding this bot's configuration."""
+        if ctx.author == ctx.guild.owner:
+            if ctx.rsvp_channel is None:
+                message_text = '**RSVP Channel not setup**'
+            else:
+                message_text = 'RSVP Channel Name: {}'.format(ctx.rsvp_channel.name)
+            for rz in ctx.zones.zones.values():
+                if isinstance(rz.discord_destination, discord.Member):
+                    message_text += '\nRaid Zone User: {} (*{}*)'.format(rz.discord_destination.name, rz.status)
+                else:
+                    message_text += '\nRaid Zone Channel: {} (*{}*)'.format(rz.discord_destination.name, rz.status)
+            await ctx.send(message_text)
+        else:
+            raise commands.CommandInvokeError('User cannot run this command.')
+
 
 def setup(bot):
     bot.add_cog(Admin(bot))
