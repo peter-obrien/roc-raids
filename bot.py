@@ -67,7 +67,7 @@ except ValueError:
     quit()
 try:
     command_char = config['DEFAULT']['command_character']
-except ValueError:
+except KeyError:
     command_char = '!'
 try:
     test_message_id = config['DEFAULT']['test_message_id']
