@@ -160,7 +160,7 @@ class RaidZone(models.Model):
 
 class GuildConfig(models.Model):
     guild = models.BigIntegerField()
-    alarm_source = models.BigIntegerField()
-    rsvp_channel = models.BigIntegerField()
-    command = models.CharField(max_length=1)
-    time_zone = models.CharField(max_length=50)
+    alarm_source = models.BigIntegerField(null=True)
+    rsvp_channel = models.BigIntegerField(null=True)
+    command = models.CharField(max_length=1, default='!')
+    time_zone = models.CharField(max_length=50, default='UTC')
