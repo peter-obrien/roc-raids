@@ -85,7 +85,7 @@ class RaidZone(models.Model):
     destination = models.BigIntegerField()
     latitude = models.DecimalField(max_digits=9, decimal_places=6)
     longitude = models.DecimalField(max_digits=9, decimal_places=6)
-    radius = models.DecimalField(max_digits=4, decimal_places=1, default=5.0)
+    radius = models.DecimalField(max_digits=5, decimal_places=2, default=5.0)
     active = models.BooleanField(default=True)
     filter_eggs = models.BooleanField(default=True)
     filter_pokemon_by_raid_level = models.BooleanField(default=True)
