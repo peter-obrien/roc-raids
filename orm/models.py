@@ -83,6 +83,7 @@ def filter_default():
 class RaidZone(models.Model):
     guild = models.BigIntegerField()
     destination = models.BigIntegerField()
+    name = models.CharField(max_length=100, default='Default')
     latitude = models.DecimalField(max_digits=9, decimal_places=6)
     longitude = models.DecimalField(max_digits=9, decimal_places=6)
     radius = models.DecimalField(max_digits=5, decimal_places=2, default=5.0)
