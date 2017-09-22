@@ -66,7 +66,7 @@ class Rsvp:
         await raid.private_discord_channel.send('{}{}'.format(author.mention, result_tuple[0].details()))
 
         # Send message to the RSVP channel if the command was invoked publicly
-        if isinstance(ctx.channel, discord.abc.GuildChannel):
+        if ctx.rsvp_channel is not None and isinstance(ctx.channel, discord.abc.GuildChannel):
             await ctx.rsvp_channel.send(result_tuple[1])
 
     @commands.command()
@@ -88,7 +88,7 @@ class Rsvp:
 
             for msg in raid.messages:
                 await msg.edit(embed=raid.embed)
-            if isinstance(ctx.channel, discord.abc.GuildChannel):
+            if ctx.rsvp_channel is not None and isinstance(ctx.channel, discord.abc.GuildChannel):
                 await ctx.rsvp_channel.send(display_msg)
 
     @commands.command()
