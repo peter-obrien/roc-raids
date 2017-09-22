@@ -13,6 +13,23 @@ class Zones:
         if isinstance(ctx.channel, discord.TextChannel):
             await ctx.message.delete()
 
+    @commands.command(hidden=True, usage='channel_id/user_id')
+    @commands.guild_only()
+    @commands.has_permissions(manage_channels=True)
+    async def zones(self, ctx, destination: int = None):
+        """List the named zones for a channel or member."""
+        zone_id = destination
+        if destination is None:
+            zone_id = ctx.channel.id
+        listed_zones = ctx.zones.zones[zone_id]
+        if len(listed_zones) == 0:
+            await ctx.send('There are no available zones.')
+        else:
+            msg = 'Here are the available raid zones:'
+            for index in range(0, len(listed_zones)):
+                msg += '\n\t{}) {}'.format(index + 1, listed_zones[index].name)
+            await ctx.send(msg)
+
     @commands.command(hidden=True)
     @commands.guild_only()
     @commands.has_permissions(manage_channels=True)
