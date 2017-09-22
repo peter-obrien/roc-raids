@@ -8,6 +8,7 @@ class Context(commands.Context):
         self.zones = self.bot.zones
         self.bot_guild = self.bot.bot_guild
         self.rsvp_channel = self.bot.rsvp_channel
+        self.rz = None
 
     async def show_help(self, command=None):
         """Shows the help command for the specified command if given.
