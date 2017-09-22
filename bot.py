@@ -156,7 +156,7 @@ class RaidCoordinator(commands.AutoShardedBot):
     async def on_message(self, message):
 
         # Used for testing purposes
-        if message.content.startswith('!go') and test_message_id is not None:
+        if message.content.startswith(command_char + 'go') and test_message_id is not None:
             await message.delete()
             message = await message.channel.get_message(test_message_id)
 
