@@ -2,6 +2,8 @@ import discord
 from decimal import Decimal, InvalidOperation
 from discord.ext import commands
 
+from orm.models import RaidZone
+
 
 class Zones:
     """Raid zone setup and configuration. To invoke user must have Manage Channels permission."""
@@ -9,9 +11,9 @@ class Zones:
     def __init__(self, bot):
         self.bot = bot
 
-    async def __after_invoke(self, ctx):
-        if isinstance(ctx.channel, discord.TextChannel):
-            await ctx.message.delete()
+    # async def __after_invoke(self, ctx):
+    #     if isinstance(ctx.channel, discord.TextChannel):
+    #         await ctx.message.delete()
 
     @commands.command(hidden=True, usage='channel_id/user_id')
     @commands.guild_only()
@@ -30,6 +32,29 @@ class Zones:
                 msg += '\n\t{}) {}'.format(index + 1, listed_zones[index].name)
             await ctx.send(msg)
 
+    @commands.group(pass_context=True)
+    @commands.guild_only()
+    @commands.has_permissions(manage_channels=True)
+    async def config(self, ctx, zone_number: int, zone_id: int):
+        """Displays a random thing you request."""
+        if ctx.invoked_subcommand is None:
+            await ctx.send(f'Incorrect config subcommand passed. Try {ctx.prefix}help config')
+        else:
+            # Lookup the channel or user
+            destination = ctx.guild.get_channel(zone_id)
+            if destination is None:
+                destination = ctx.guild.get_member(zone_id)
+            if destination is None:
+                raise commands.BadArgument('`zone_id` could not be resolved to a valid user or channel.')
+
+            if zone_id in ctx.zones.zones and zone_number <= len(ctx.zones.zones[zone_id]):
+                ctx.rz = ctx.zones.zones[zone_id][zone_number - 1]
+            elif ctx.subcommand_passed == 'setup':
+                ctx.rz = destination
+            else:
+                raise commands.BadArgument(
+                    'The raid zone specified does not exist: `{} {}`'.format(zone_number, zone_id))
+
     @commands.command(hidden=True)
     @commands.guild_only()
     @commands.has_permissions(manage_channels=True)
@@ -39,7 +64,7 @@ class Zones:
             lon = Decimal(longitude)
 
             if ctx.channel.id in ctx.zones.zones:
-                rz = ctx.zones.zones[ctx.channel.id]
+                rz = ctx.zones.zones[ctx.channel.id][0]
                 rz.latitude = lat
                 rz.longitude = lon
                 rz.save()
@@ -52,6 +77,43 @@ class Zones:
             print(e)
             await ctx.send('There was an error handling your request.\n\n`{}`'.format(ctx.message.content))
 
+    @config.command(name='setup')
+    async def setup_sub(self, ctx, latitude: str, longitude: str):
+        try:
+            lat = Decimal(latitude)
+            lon = Decimal(longitude)
+
+            if isinstance(ctx.rz, RaidZone):
+                ctx.rz.latitude = lat
+                ctx.rz.longitude = lon
+                ctx.rz.save()
+                await ctx.send('Raid zone coordinates updated')
+            else:
+                rz = ctx.zones.create_zone(ctx.guild.id, ctx.rz.id, lat, lon)
+                rz.discord_destination = ctx.rz
+                await ctx.send('Raid zone created')
+        except Exception as e:
+            print(e)
+            await ctx.send('There was an error handling your request.\n\n`{}`'.format(ctx.message.content))
+
+    @commands.command(hidden=True)
+    @commands.guild_only()
+    @commands.has_permissions(manage_channels=True)
+    async def rename(self, ctx, new_name: str):
+        if ctx.message.channel.id in ctx.zones.zones:
+            rz = ctx.zones.zones[ctx.channel.id][0]
+            rz.name = new_name
+            rz.save()
+            await ctx.send('Zone renamed')
+        else:
+            await ctx.send('Setup has not been run for this channel.')
+
+    @config.command(name='rename')
+    async def rename_sub(self, ctx, new_name: str):
+        ctx.rz.name = new_name
+        ctx.rz.save()
+        await ctx.send('Zone renamed')
+
     @commands.command(hidden=True, usage='xxx.x')
     @commands.guild_only()
     @commands.has_permissions(manage_channels=True)
@@ -62,7 +124,7 @@ class Zones:
                 await ctx.send('Radius is too large.')
             else:
                 if ctx.message.channel.id in ctx.zones.zones:
-                    rz = ctx.zones.zones[ctx.channel.id]
+                    rz = ctx.zones.zones[ctx.channel.id][0]
                     rz.radius = radius
                     rz.save()
                     await ctx.send('Radius updated')
@@ -77,7 +139,7 @@ class Zones:
     async def zone(self, ctx, value: str):
         """Toggles if this raid zone is active or not."""
         if ctx.channel.id in ctx.zones.zones:
-            rz = ctx.zones.zones[ctx.channel.id]
+            rz = ctx.zones.zones[ctx.channel.id][0]
             if value == 'on':
                 rz.active = True
                 rz.save()
@@ -98,7 +160,7 @@ class Zones:
     async def eggs(self, ctx, value: str):
         """Toggles whether this zone will receive raid eggs."""
         if ctx.channel.id in ctx.zones.zones:
-            rz = ctx.zones.zones[ctx.channel.id]
+            rz = ctx.zones.zones[ctx.channel.id][0]
             if value.lower() == 'on':
                 rz.filter_eggs = True
                 rz.save()
@@ -118,7 +180,7 @@ class Zones:
     async def info(self, ctx):
         """Displays the raid zones configuration for a channel."""
         if ctx.channel.id in ctx.zones.zones:
-            rz = ctx.zones.zones[ctx.channel.id]
+            rz = ctx.zones.zones[ctx.channel.id][0]
             output = '''Here is the raid zone configuration for this channel:
 Status: `{}`
 Coordinates: `{}, {}`
@@ -143,7 +205,7 @@ Pokemon: `{}`'''.format(rz.status, rz.latitude, rz.longitude, rz.radius, rz.egg_
             return
         try:
             if ctx.channel.id in ctx.zones.zones:
-                rz = ctx.zones.zones[ctx.channel.id]
+                rz = ctx.zones.zones[ctx.channel.id][0]
                 new_filter = []
                 if pokemon_numbers[0] != '0':
                     for raid_level in pokemon_numbers:
@@ -168,7 +230,7 @@ Pokemon: `{}`'''.format(rz.status, rz.latitude, rz.longitude, rz.radius, rz.egg_
             return
         try:
             if ctx.channel.id in ctx.zones.zones:
-                rz = ctx.zones.zones[ctx.channel.id]
+                rz = ctx.zones.zones[ctx.channel.id][0]
                 new_filter = []
                 if '0' != raid_levels[0]:
                     for raid_level in raid_levels:
@@ -189,7 +251,7 @@ Pokemon: `{}`'''.format(rz.status, rz.latitude, rz.longitude, rz.radius, rz.egg_
     async def monlevels(self, ctx, value: str):
         """Toggles whether this zone will have pokemon filtered by raid level. Use this if you only want to filter by pokemon number for non eggs."""
         if ctx.channel.id in ctx.zones.zones:
-            rz = ctx.zones.zones[ctx.channel.id]
+            rz = ctx.zones.zones[ctx.channel.id][0]
             if value.lower() == 'on':
                 rz.filter_pokemon_by_raid_level = True
                 rz.save()
