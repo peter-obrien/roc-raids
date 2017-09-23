@@ -1,5 +1,6 @@
 import discord
 from discord.ext import commands
+from django.utils.timezone import activate
 
 from orm.models import BotOnlyChannel
 
@@ -65,7 +66,9 @@ class Admin:
     async def set_rsvp(self, ctx):
         """Make the channel where the command is run the guild RSVP output channel."""
         if ctx.author == ctx.guild.owner:
-            print('Setting RSVP channel to {}'.format(ctx.channel.id))
+            ctx.bot.config.rsvp_channel = ctx.channel.id
+            ctx.bot.config.save()
+            await ctx.send('This channel is now the RSVP destination channel.')
         else:
             raise commands.CommandInvokeError('User cannot run this command.')
 
@@ -74,7 +77,9 @@ class Admin:
     async def set_alarm_source(self, ctx):
         """Make the channel where the command is run the source channel of Pokemon Alarm notification."""
         if ctx.author == ctx.guild.owner:
-            print('Setting alarm source channel to {}'.format(ctx.channel.id))
+            ctx.bot.config.alarm_source = ctx.channel.id
+            ctx.bot.config.save()
+            await ctx.send('This channel is now the alarm source channel.')
         else:
             raise commands.CommandInvokeError('User cannot run this command.')
 
@@ -83,7 +88,15 @@ class Admin:
     async def set_time_zone(self, ctx, time_zone):
         """Change the time zone in which the raid end times display."""
         if ctx.author == ctx.guild.owner:
-            print('Setting time zone to {}'.format(time_zone))
+            # Activate the time zone first to verify it's a valid time zone
+            try:
+                activate(time_zone)
+            except ValueError as e:
+                raise commands.BadArgument(str(e))
+
+            ctx.bot.config.time_zone = time_zone
+            ctx.bot.config.save()
+            await ctx.send('Changed time zone to {}'.format(time_zone))
         else:
             raise commands.CommandInvokeError('User cannot run this command.')
 
@@ -92,7 +105,9 @@ class Admin:
     async def set_command(self, ctx, char):
         """Changes the character to invoke commands."""
         if ctx.author == ctx.guild.owner:
-            print('Setting command character to `{}`'.format(char))
+            ctx.bot.config.command = char
+            ctx.bot.config.save()
+            await ctx.send('Changed command character to `{}`'.format(char))
         else:
             raise commands.CommandInvokeError('User cannot run this command.')
 
