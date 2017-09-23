@@ -1,8 +1,16 @@
-import discord
 from decimal import Decimal, InvalidOperation
+
 from discord.ext import commands
 
 from orm.models import RaidZone
+
+
+class ChannelOrMember(commands.Converter):
+    async def convert(self, ctx, argument):
+        try:
+            return await commands.TextChannelConverter().convert(ctx, argument)
+        except commands.BadArgument:
+            return await commands.MemberConverter().convert(ctx, argument)
 
 
 class Zones:
@@ -18,11 +26,12 @@ class Zones:
     @commands.command(hidden=True, usage='channel_id/user_id')
     @commands.guild_only()
     @commands.has_permissions(manage_channels=True)
-    async def zones(self, ctx, destination: int = None):
+    async def zones(self, ctx, destination: ChannelOrMember = None):
         """List the named zones for a channel or member."""
-        zone_id = destination
         if destination is None:
             zone_id = ctx.channel.id
+        else:
+            zone_id = destination.id
         listed_zones = ctx.zones.zones[zone_id]
         if len(listed_zones) == 0:
             await ctx.send('There are no available zones.')
@@ -35,25 +44,18 @@ class Zones:
     @commands.group(pass_context=True)
     @commands.guild_only()
     @commands.has_permissions(manage_channels=True)
-    async def config(self, ctx, zone_number: int, zone_id: int):
+    async def config(self, ctx, destination: ChannelOrMember, number: int):
         """Displays a random thing you request."""
         if ctx.invoked_subcommand is None:
             await ctx.send(f'Incorrect config subcommand passed. Try {ctx.prefix}help config')
         else:
-            # Lookup the channel or user
-            destination = ctx.guild.get_channel(zone_id)
-            if destination is None:
-                destination = ctx.guild.get_member(zone_id)
-            if destination is None:
-                raise commands.BadArgument('`zone_id` could not be resolved to a valid user or channel.')
-
-            if zone_id in ctx.zones.zones and zone_number <= len(ctx.zones.zones[zone_id]):
-                ctx.rz = ctx.zones.zones[zone_id][zone_number - 1]
+            if destination.id in ctx.zones.zones and number <= len(ctx.zones.zones[destination.id]):
+                ctx.rz = ctx.zones.zones[destination.id][number - 1]
             elif ctx.subcommand_passed == 'setup':
                 ctx.rz = destination
             else:
                 raise commands.BadArgument(
-                    'The raid zone specified does not exist: `{} {}`'.format(zone_number, zone_id))
+                    'The raid zone specified does not exist: `{} {}`'.format(destination, number))
 
     @commands.command(hidden=True)
     @commands.guild_only()
