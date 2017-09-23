@@ -14,7 +14,7 @@ import alarm_handler
 import gymhuntr_handler
 
 from discord.ext import commands
-from orm.models import BotOnlyChannel, Raid
+from orm.models import BotOnlyChannel, Raid, GuildConfig
 from cogs.utils import context
 from raids import RaidManager, RaidZoneManager
 from datetime import timedelta
@@ -76,7 +76,7 @@ except Exception as e:
 
 
 def _prefix_callable(bot, msg):
-    return command_char
+    return bot.config.command
 
 
 class RaidCoordinator(commands.AutoShardedBot):
@@ -91,6 +91,14 @@ class RaidCoordinator(commands.AutoShardedBot):
         self.rsvp_channel = None
         self.bot_only_channels = []
         self.reset_date = timezone.localdate(timezone.now()) + timedelta(hours=24)
+
+        config_results = GuildConfig.objects.filter(guild=guild_id)
+        if len(config_results) == 0:
+            gc = GuildConfig(guild=guild_id)
+            gc.save()
+            self.config = gc
+        else:
+            self.config = config_results[0]
 
         # create the background task and run it in the background
         self.bg_task = self.loop.create_task(self.background_cleanup())
@@ -121,6 +129,13 @@ class RaidCoordinator(commands.AutoShardedBot):
     async def on_ready(self):
         self.bot_guild = self.get_guild(guild_id)
         self.rsvp_channel = self.bot_guild.get_channel(rsvp_channel_id)
+        self.config.discord_rsvp_channel = self.rsvp_channel
+
+        for cat in self.bot_guild.categories:
+            if self.config.raid_category == cat.id:
+                print('Found raid category: {}'.format(cat.name))
+                self.config.discord_raid_category = cat
+                break
 
         for boc in BotOnlyChannel.objects.all():
             channel = self.bot_guild.get_channel(boc.channel)
@@ -156,7 +171,7 @@ class RaidCoordinator(commands.AutoShardedBot):
     async def on_message(self, message):
 
         # Used for testing purposes
-        if message.content.startswith('!go') and test_message_id is not None:
+        if message.content.startswith(command_char + 'go') and test_message_id is not None:
             await message.delete()
             message = await message.channel.get_message(test_message_id)
 

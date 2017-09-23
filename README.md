@@ -1,7 +1,7 @@
 ## Setup
 This bot uses the [discord.py](https://github.com/Rapptz/discord.py/tree/rewrite) rewrite as such requires a version of Python that is compatible with the library.
 
-Before continuing, please follow their instructions to setup their library.
+`python3 -m pip install -U git+https://github.com/Rapptz/discord.py@rewrite#egg=discord.py[voice]`
 
 Other libraries used are:
 ```

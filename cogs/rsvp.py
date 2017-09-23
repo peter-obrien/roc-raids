@@ -41,6 +41,9 @@ class Rsvp:
             }
             private_raid_channel = await ctx.bot_guild.create_text_channel('raid-{}-chat'.format(raid.display_id),
                                                                            overwrites=overwrites)
+            if ctx.bot.config.discord_raid_category is not None:
+                await private_raid_channel.edit(category=ctx.bot.config.discord_raid_category)
+
             raid.private_discord_channel = private_raid_channel
 
             # Send the raid card to the top of the channel.
@@ -66,7 +69,7 @@ class Rsvp:
         await raid.private_discord_channel.send('{}{}'.format(author.mention, result_tuple[0].details()))
 
         # Send message to the RSVP channel if the command was invoked publicly
-        if isinstance(ctx.channel, discord.abc.GuildChannel):
+        if ctx.rsvp_channel is not None and isinstance(ctx.channel, discord.abc.GuildChannel):
             await ctx.rsvp_channel.send(result_tuple[1])
 
     @commands.command()
@@ -88,7 +91,7 @@ class Rsvp:
 
             for msg in raid.messages:
                 await msg.edit(embed=raid.embed)
-            if isinstance(ctx.channel, discord.abc.GuildChannel):
+            if ctx.rsvp_channel is not None and isinstance(ctx.channel, discord.abc.GuildChannel):
                 await ctx.rsvp_channel.send(display_msg)
 
     @commands.command()
