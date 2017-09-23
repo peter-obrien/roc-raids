@@ -112,6 +112,17 @@ class Admin:
             raise commands.CommandInvokeError('User cannot run this command.')
 
     @commands.command(hidden=True)
+    @commands.guild_only()
+    async def set_raid_category(self, ctx, category: discord.CategoryChannel):
+        """Sets the category for private raid channels"""
+        if ctx.author == ctx.guild.owner:
+            ctx.bot.config.raid_category = category.id
+            ctx.bot.config.save()
+            await ctx.send('Private raid channels will now be assigned to `{}`'.format(category.name))
+        else:
+            raise commands.CommandInvokeError('User cannot run this command.')
+
+    @commands.command(hidden=True)
     async def debug(self, ctx):
         """Prints out diagnostic information regarding this bot's configuration."""
         if ctx.author == ctx.guild.owner:
