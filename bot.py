@@ -129,6 +129,13 @@ class RaidCoordinator(commands.AutoShardedBot):
     async def on_ready(self):
         self.bot_guild = self.get_guild(guild_id)
         self.rsvp_channel = self.bot_guild.get_channel(rsvp_channel_id)
+        self.config.discord_rsvp_channel = self.rsvp_channel
+
+        for cat in self.bot_guild.categories:
+            if self.config.raid_category == cat.id:
+                print('Found raid category: {}'.format(cat.name))
+                self.config.discord_raid_category = cat
+                break
 
         for boc in BotOnlyChannel.objects.all():
             channel = self.bot_guild.get_channel(boc.channel)
