@@ -45,7 +45,9 @@ class Zones:
     @commands.guild_only()
     @commands.has_permissions(manage_channels=True)
     async def config(self, ctx, destination: ChannelOrMember, number: int):
-        """Displays a random thing you request."""
+        """Allow for configuration of a specified raid zone.
+
+        Allows for multiple zones to be setup for a channel or setting up a zone for a member."""
         if ctx.invoked_subcommand is None:
             await ctx.send(f'Incorrect config subcommand passed. Try {ctx.prefix}help config')
         else:
@@ -61,6 +63,7 @@ class Zones:
     @commands.guild_only()
     @commands.has_permissions(manage_channels=True)
     async def setup(self, ctx, latitude: str, longitude: str):
+        """Creates a new raid zone or changes the coordinates of an existing one."""
         try:
             lat = Decimal(latitude)
             lon = Decimal(longitude)
@@ -81,6 +84,7 @@ class Zones:
 
     @config.command(name='setup')
     async def setup_sub(self, ctx, latitude: str, longitude: str):
+        """Creates a new raid zone or changes the coordinates of an existing one."""
         try:
             lat = Decimal(latitude)
             lon = Decimal(longitude)
@@ -102,6 +106,7 @@ class Zones:
     @commands.guild_only()
     @commands.has_permissions(manage_channels=True)
     async def rename(self, ctx, new_name: str):
+        """Changes the name of a zone."""
         if ctx.message.channel.id in ctx.zones.zones:
             rz = ctx.zones.zones[ctx.channel.id][0]
             rz.name = new_name
@@ -112,6 +117,7 @@ class Zones:
 
     @config.command(name='rename')
     async def rename_sub(self, ctx, new_name: str):
+        """Changes the name of a zone."""
         ctx.rz.name = new_name
         ctx.rz.save()
         await ctx.send('Zone renamed')
@@ -120,6 +126,7 @@ class Zones:
     @commands.guild_only()
     @commands.has_permissions(manage_channels=True)
     async def radius(self, ctx, value: str):
+        """Sets the radius for a zone."""
         try:
             radius = Decimal(value)
             if radius >= 1000.0:
@@ -137,6 +144,7 @@ class Zones:
 
     @config.command(name='radius', hidden=True, usage='xxx.x')
     async def radius_sub(self, ctx, value: str):
+        """Sets the radius for a zone."""
         try:
             radius = Decimal(value)
             if radius >= 1000.0:
