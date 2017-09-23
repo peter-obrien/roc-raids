@@ -68,6 +68,7 @@ class Admin:
         if ctx.author == ctx.guild.owner:
             ctx.bot.config.rsvp_channel = ctx.channel.id
             ctx.bot.config.save()
+            ctx.bot.config.discord_rsvp_channel = ctx.channel
             await ctx.send('This channel is now the RSVP destination channel.')
         else:
             raise commands.CommandInvokeError('User cannot run this command.')
@@ -79,6 +80,7 @@ class Admin:
         if ctx.author == ctx.guild.owner:
             ctx.bot.config.alarm_source = ctx.channel.id
             ctx.bot.config.save()
+            ctx.bot.config.discord_alarm_source = ctx.channel
             await ctx.send('This channel is now the alarm source channel.')
         else:
             raise commands.CommandInvokeError('User cannot run this command.')
@@ -118,6 +120,7 @@ class Admin:
         if ctx.author == ctx.guild.owner:
             ctx.bot.config.raid_category = category.id
             ctx.bot.config.save()
+            ctx.bot.config.discord_raid_category = category
             await ctx.send('Private raid channels will now be assigned to `{}`'.format(category.name))
         else:
             raise commands.CommandInvokeError('User cannot run this command.')
