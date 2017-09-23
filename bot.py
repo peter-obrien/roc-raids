@@ -14,7 +14,7 @@ import alarm_handler
 import gymhuntr_handler
 
 from discord.ext import commands
-from orm.models import BotOnlyChannel, Raid
+from orm.models import BotOnlyChannel, Raid, GuildConfig
 from cogs.utils import context
 from raids import RaidManager, RaidZoneManager
 from datetime import timedelta
@@ -76,7 +76,7 @@ except Exception as e:
 
 
 def _prefix_callable(bot, msg):
-    return command_char
+    return bot.config.command
 
 
 class RaidCoordinator(commands.AutoShardedBot):
@@ -91,6 +91,14 @@ class RaidCoordinator(commands.AutoShardedBot):
         self.rsvp_channel = None
         self.bot_only_channels = []
         self.reset_date = timezone.localdate(timezone.now()) + timedelta(hours=24)
+
+        config_results = GuildConfig.objects.filter(guild=guild_id)
+        if len(config_results) == 0:
+            gc = GuildConfig(guild=guild_id)
+            gc.save()
+            self.config = gc
+        else:
+            self.config = config_results[0]
 
         # create the background task and run it in the background
         self.bg_task = self.loop.create_task(self.background_cleanup())
