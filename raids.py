@@ -1,3 +1,4 @@
+from collections import defaultdict
 from discord.ext import commands
 from orm.models import Raid, RaidParticipant, RaidMessage, RaidZone
 import discord
@@ -195,12 +196,12 @@ class RaidManager:
 
 class RaidZoneManager:
     def __init__(self):
-        self.zones = dict()
+        self.zones = defaultdict(list)
 
     def create_zone(self, guild, destination, latitude, longitude):
         rz = RaidZone(guild=guild, destination=destination, latitude=latitude, longitude=longitude)
         rz.save()
-        self.zones[destination] = rz
+        self.zones[destination].append(rz)
         return rz
 
     async def load_from_database(self, bot):
@@ -210,22 +211,23 @@ class RaidZoneManager:
                 channel = bot.get_guild(rz.guild).get_member(int(rz.destination))
             if channel is not None:
                 rz.discord_destination = channel
-                self.zones[rz.destination] = rz
+                self.zones[rz.destination].append(rz)
             else:
                 print('Unable to load raid zone for id {} destination {}'.format(rz.id, rz.destination))
 
     async def send_to_raid_zones(self, raid):
         objects_to_save = []
-        for rz in self.zones.values():
-            if rz.filter(raid):
-                try:
-                    raid_message = await rz.discord_destination.send(embed=raid.embed)
-                    if not isinstance(rz.discord_destination, discord.member.Member):
-                        objects_to_save.append(
-                            RaidMessage(raid=raid, channel=raid_message.channel.id, message=raid_message.id))
-                        raid.messages.append(raid_message)
-                except discord.errors.Forbidden:
-                    print('Unable to send raid to channel {}. The bot does not have permission.'.format(
-                        rz.discord_destination.name))
-                    pass
+        for zone_list in self.zones.values():
+            for rz in zone_list:
+                if rz.filter(raid):
+                    try:
+                        raid_message = await rz.discord_destination.send(embed=raid.embed)
+                        if not isinstance(rz.discord_destination, discord.member.Member):
+                            objects_to_save.append(
+                                RaidMessage(raid=raid, channel=raid_message.channel.id, message=raid_message.id))
+                            raid.messages.append(raid_message)
+                    except discord.errors.Forbidden:
+                        print('Unable to send raid to channel {}. The bot does not have permission.'.format(
+                            rz.discord_destination.name))
+                        pass
         return objects_to_save
