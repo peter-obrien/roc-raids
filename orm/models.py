@@ -165,3 +165,4 @@ class GuildConfig(models.Model):
     rsvp_channel = models.BigIntegerField(null=True)
     command = models.CharField(max_length=1, default='!')
     time_zone = models.CharField(max_length=50, default='UTC')
+    raid_category = models.BigIntegerField(null=True)
