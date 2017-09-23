@@ -93,11 +93,11 @@ class Zones:
                 ctx.rz.latitude = lat
                 ctx.rz.longitude = lon
                 ctx.rz.save()
-                await ctx.send('Raid zone coordinates updated')
+                await ctx.rz.discord_destination.send('Raid zone coordinates updated')
             else:
                 rz = ctx.zones.create_zone(ctx.guild.id, ctx.rz.id, lat, lon)
                 rz.discord_destination = ctx.rz
-                await ctx.send('Raid zone created')
+                await ctx.rz.send('Raid zone created')
         except Exception as e:
             print(e)
             await ctx.send('There was an error handling your request.\n\n`{}`'.format(ctx.message.content))
@@ -120,7 +120,7 @@ class Zones:
         """Changes the name of a zone."""
         ctx.rz.name = new_name
         ctx.rz.save()
-        await ctx.send('Zone renamed')
+        await ctx.rz.discord_destination.send('Zone renamed')
 
     @commands.command(hidden=True, usage='xxx.x')
     @commands.guild_only()
@@ -152,7 +152,7 @@ class Zones:
             else:
                 ctx.rz.radius = radius
                 ctx.rz.save()
-                await ctx.send('Radius updated')
+                await ctx.rz.discord_destination.send('Radius updated')
         except InvalidOperation:
             raise commands.BadArgument('Invalid radius: {}'.format(value))
 
@@ -183,11 +183,11 @@ class Zones:
         if value == 'on':
             ctx.rz.active = True
             ctx.rz.save()
-            await ctx.send('Raid messages enabled.')
+            await ctx.rz.discord_destination.send('Raid messages enabled.')
         elif value == 'off':
             ctx.rz.active = False
             ctx.rz.save()
-            await ctx.send('Raid messages disabled.')
+            await ctx.rz.discord_destination.send('Raid messages disabled.')
         else:
             raise commands.BadArgument('Unable to process argument `{}` for `{}`'.format(value, ctx.command))
 
@@ -217,11 +217,11 @@ class Zones:
         if value.lower() == 'on':
             ctx.rz.filter_eggs = True
             ctx.rz.save()
-            await ctx.send('Egg notifications enabled.')
+            await ctx.rz.discord_destination.send('Egg notifications enabled.')
         elif value.lower() == 'off':
             ctx.rz.filter_eggs = False
             ctx.rz.save()
-            await ctx.send('Egg notifications disabled.')
+            await ctx.rz.discord_destination.send('Egg notifications disabled.')
         else:
             raise commands.BadArgument('Unable to process argument `{}` for `{}`'.format(value, ctx.command))
 
@@ -302,7 +302,7 @@ Pokemon: `{}`'''.format(ctx.rz.name, ctx.rz.status, ctx.rz.latitude, ctx.rz.long
             ctx.rz.filters['pokemon'].clear()
             ctx.rz.filters['pokemon'] = sorted(new_filter)
             ctx.rz.save()
-            await ctx.send('Updated pokemon filter list: `{}`'.format(rz.filters['pokemon']))
+            await ctx.rz.discord_destination.send('Updated pokemon filter list: `{}`'.format(ctx.rz.filters['pokemon']))
         except ValueError:
             await ctx.send('Unable to process filter. Please verify your input: `{}`'.format(ctx.message.content))
             pass
@@ -346,7 +346,7 @@ Pokemon: `{}`'''.format(ctx.rz.name, ctx.rz.status, ctx.rz.latitude, ctx.rz.long
             ctx.rz.filters['raid_levels'].clear()
             ctx.rz.filters['raid_levels'] = new_filter
             ctx.rz.save()
-            await ctx.send('Updated raid level filter list')
+            await ctx.rz.discord_destination.send('Updated raid level filter list')
         except ValueError:
             await ctx.send('Unable to process filter. Please verify your input: `{}`'.format(ctx.message.content))
             pass
@@ -377,11 +377,11 @@ Pokemon: `{}`'''.format(ctx.rz.name, ctx.rz.status, ctx.rz.latitude, ctx.rz.long
         if value.lower() == 'on':
             ctx.rz.filter_pokemon_by_raid_level = True
             ctx.rz.save()
-            await ctx.send('Pokemon filtering by raid level enabled.')
+            await ctx.rz.discord_destination.send('Pokemon filtering by raid level enabled.')
         elif value.lower() == 'off':
             ctx.rz.filter_pokemon_by_raid_level = False
             ctx.rz.save()
-            await ctx.send('Pokemon filtering by raid level disabled.')
+            await ctx.rz.discord_destination.send('Pokemon filtering by raid level disabled.')
         else:
             raise commands.BadArgument('Unable to process argument `{}` for `{}`'.format(value, ctx.command))
 
