@@ -102,15 +102,20 @@ class RaidManager:
 
         self.update_embed_participants(raid)
         party_descriptor = (' +{} '.format(str(party_size - 1)) if party_size > 1 else '')
+
+        if raid.pokemon_name is None:
+            pokemon_or_raid_level = f'a Level {raid.raid_level}'
+        else:
+            pokemon_or_raid_level = raid.pokemon_name
         if already_in_raid:
             return participant, "{} {}has __modified__ their RSVP to {} Raid #{} at {}".format(user_name,
                                                                                                party_descriptor,
-                                                                                               raid.pokemon_name,
+                                                                                               pokemon_or_raid_level,
                                                                                                raid.display_id,
                                                                                                raid.gym_name)
         else:
             return participant, "{} {}has RSVP'd to {} Raid #{} at {}".format(user_name, party_descriptor,
-                                                                              raid.pokemon_name,
+                                                                              pokemon_or_raid_level,
                                                                               raid.display_id, raid.gym_name)
 
     def remove_participant(self, raid, user_id, user_name):
