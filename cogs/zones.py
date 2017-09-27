@@ -2,15 +2,8 @@ from decimal import Decimal, InvalidOperation
 
 from discord.ext import commands
 
+from cogs.utils.converters import ChannelOrMember
 from orm.models import RaidZone
-
-
-class ChannelOrMember(commands.Converter):
-    async def convert(self, ctx, argument):
-        try:
-            return await commands.TextChannelConverter().convert(ctx, argument)
-        except commands.BadArgument:
-            return await commands.MemberConverter().convert(ctx, argument)
 
 
 class Zones:
