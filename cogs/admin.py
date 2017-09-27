@@ -1,7 +1,10 @@
+from decimal import Decimal
+
 import discord
 from discord.ext import commands
 from django.utils.timezone import activate
 
+from cogs.utils.converters import UserRaidEndTime
 from orm.models import BotOnlyChannel
 
 
@@ -141,6 +144,17 @@ class Admin:
             await ctx.send(message_text)
         else:
             raise commands.CommandInvokeError('User cannot run this command.')
+
+    @commands.command(name='create_ex')
+    @commands.guild_only()
+    @commands.has_permissions(manage_channels=True)
+    async def create_exclusive_raid(self, ctx, gym_name: str, latitude: Decimal, longitude: Decimal,
+                                    expiration: UserRaidEndTime):
+        """Creates an EX raid that user can join via the RSVP commands.
+
+        Expiration time must follow the format MM/DD/YY 24H
+        """
+        await ctx.send(f'Creating EX raid for {gym_name} at ({latitude}, {longitude}) ending on {expiration}')
 
 
 def setup(bot):
