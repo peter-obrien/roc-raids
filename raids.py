@@ -14,15 +14,22 @@ class RaidManager:
         self.hashed_active_raids = dict()
         self.raid_map = dict()
         self.raid_seed = 0
-        last_raid_seed = Raid.objects.filter(active=True).aggregate(Max('display_id')).get('display_id__max')
+        last_raid_seed = Raid.objects.filter(active=True, is_exclusive=False).aggregate(Max('display_id')).get('display_id__max')
         if last_raid_seed is not None:
             self.raid_seed = last_raid_seed
+        self.exclusive_raid_seed = 0
+        last_raid_seed = Raid.objects.filter(active=True, is_exclusive=True).aggregate(Max('display_id')).get('display_id__max')
+        if last_raid_seed is not None:
+            self.exclusive_raid_seed = last_raid_seed
 
     async def load_from_database(self, bot):
 
         for raid in Raid.objects.filter(active=True):
             self.hashed_active_raids[hash(raid)] = raid
-            self.raid_map[raid.display_id] = raid
+            if raid.is_exclusive:
+                self.raid_map[f'EX{raid.display_id}'] = raid
+            else:
+                self.raid_map[raid.display_id] = raid
             raid.private_discord_channel = bot.get_channel(raid.private_channel)
 
             if raid.is_egg:
@@ -58,7 +65,6 @@ class RaidManager:
         self.raid_seed += 1
         raid.display_id = self.raid_seed
         self.hashed_active_raids[hash(raid)] = raid
-        self.raid_map[raid.display_id] = raid
         raid.save()
         return raid
 
