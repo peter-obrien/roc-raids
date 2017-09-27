@@ -16,4 +16,4 @@ class UserRaidEndTime(commands.Converter):
         try:
             return datetime.strptime(argument, '%m/%d/%y %H')
         except ValueError:
-            raise commands.BadArgument(f'Unable to parse end time `{argument}` expected "MM/DD/YY H:24"')
+            raise commands.BadArgument(f'Unable to parse end time `{argument}` expected "MM/DD/YY 24H"')
