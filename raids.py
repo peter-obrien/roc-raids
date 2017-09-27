@@ -85,8 +85,12 @@ class RaidManager:
         raid.messages = None
         raid.participants = None
         raid.private_discord_channel = None
-        self.hashed_active_raids.pop(hash(raid), None)
-        self.raid_map.pop(raid.display_id, None)
+        if raid.is_exclusive:
+            self.exclusive_hashed_raids.pop(hash(raid), None)
+            self.exclusive_raid_map.pop(raid.display_id, None)
+        else:
+            self.hashed_active_raids.pop(hash(raid), None)
+            self.raid_map.pop(raid.display_id, None)
 
     def get_raid(self, raid_id_str):
         if raid_id_str.lower().startswith('ex'):
