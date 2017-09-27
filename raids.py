@@ -17,6 +17,9 @@ class RaidManager:
         last_raid_seed = Raid.objects.filter(active=True, is_exclusive=False).aggregate(Max('display_id')).get('display_id__max')
         if last_raid_seed is not None:
             self.raid_seed = last_raid_seed
+
+        self.exclusive_hashed_raids = dict()
+        self.exclusive_raid_map = dict()
         self.exclusive_raid_seed = 0
         last_raid_seed = Raid.objects.filter(active=True, is_exclusive=True).aggregate(Max('display_id')).get('display_id__max')
         if last_raid_seed is not None:
@@ -25,10 +28,11 @@ class RaidManager:
     async def load_from_database(self, bot):
 
         for raid in Raid.objects.filter(active=True):
-            self.hashed_active_raids[hash(raid)] = raid
             if raid.is_exclusive:
-                self.raid_map[f'EX{raid.display_id}'] = raid
+                self.exclusive_hashed_raids[hash(raid)] = raid
+                self.exclusive_raid_map[raid.display_id] = raid
             else:
+                self.hashed_active_raids[hash(raid)] = raid
                 self.raid_map[raid.display_id] = raid
             raid.private_discord_channel = bot.get_channel(raid.private_channel)
 
@@ -50,6 +54,14 @@ class RaidManager:
                         print(f'Could not find channel raid message {rm.id}')
                 except discord.errors.NotFound:
                     pass
+
+    def create_exclusive_raid(self, gym_name, expiration, latitude, longitude):
+        self.exclusive_raid_seed += 1
+        raid = Raid(display_id=self.exclusive_raid_seed, gym_name=gym_name, raid_level=0, latitude=latitude,
+                    longitude=longitude, expiration=expiration, is_exclusive=True)
+        self.exclusive_raid_map[raid.display_id] = raid
+        self.exclusive_hashed_raids[hash(raid)] = raid
+        raid.save()
 
     def create_raid(self, pokemon_name, pokemon_number, raid_level, gym_name, expiration, latitude, longitude,
                     hatch_time):
