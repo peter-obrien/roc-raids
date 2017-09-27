@@ -122,7 +122,7 @@ class RaidCoordinator(commands.AutoShardedBot):
         elif isinstance(error, commands.BadArgument):
             await ctx.author.send(str(error))
         elif isinstance(error, commands.MissingRequiredArgument):
-            await ctx.author.send('Missing required argument for: {}'.format(ctx.command))
+            await ctx.author.send(f'Missing required argument for: {ctx.command}')
             await ctx.show_help(command=ctx.command)
             await ctx.message.delete()
 
@@ -133,7 +133,7 @@ class RaidCoordinator(commands.AutoShardedBot):
 
         for cat in self.bot_guild.categories:
             if self.config.raid_category == cat.id:
-                print('Found raid category: {}'.format(cat.name))
+                print(f'Found raid category: {cat.name}')
                 self.config.discord_raid_category = cat
                 break
 

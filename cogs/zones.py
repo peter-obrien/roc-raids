@@ -38,7 +38,7 @@ class Zones:
         else:
             msg = 'Here are the available raid zones:'
             for index in range(0, len(listed_zones)):
-                msg += '\n\t{}) {}'.format(index + 1, listed_zones[index].name)
+                msg += f'\n\t{index + 1}) {listed_zones[index].name}'
             await ctx.send(msg)
 
     @commands.group(pass_context=True)
@@ -57,7 +57,7 @@ class Zones:
                 ctx.rz = destination
             else:
                 raise commands.BadArgument(
-                    'The raid zone specified does not exist: `{} {}`'.format(destination, number))
+                    f'The raid zone specified does not exist: `{destination} {number}`')
 
     @commands.command(hidden=True)
     @commands.guild_only()
@@ -80,7 +80,7 @@ class Zones:
                 await ctx.send('Raid zone created')
         except Exception as e:
             print(e)
-            await ctx.send('There was an error handling your request.\n\n`{}`'.format(ctx.message.content))
+            await ctx.send(f'There was an error handling your request.\n\n`{ctx.message.content}`')
 
     @config.command(name='setup')
     async def setup_sub(self, ctx, latitude: str, longitude: str):
@@ -100,7 +100,7 @@ class Zones:
                 await ctx.rz.send('Raid zone created')
         except Exception as e:
             print(e)
-            await ctx.send('There was an error handling your request.\n\n`{}`'.format(ctx.message.content))
+            await ctx.send(f'There was an error handling your request.\n\n`{ctx.message.content}`')
 
     @commands.command(hidden=True)
     @commands.guild_only()
@@ -140,7 +140,7 @@ class Zones:
                 else:
                     await ctx.send('Setup has not been run for this channel.')
         except InvalidOperation:
-            raise commands.BadArgument('Invalid radius: {}'.format(value))
+            raise commands.BadArgument(f'Invalid radius: {value}')
 
     @config.command(name='radius', hidden=True, usage='xxx.x')
     async def radius_sub(self, ctx, value: str):
@@ -154,7 +154,7 @@ class Zones:
                 ctx.rz.save()
                 await ctx.rz.discord_destination.send('Radius updated')
         except InvalidOperation:
-            raise commands.BadArgument('Invalid radius: {}'.format(value))
+            raise commands.BadArgument(f'Invalid radius: {value}')
 
     @commands.command(hidden=True)
     @commands.guild_only()
@@ -172,7 +172,7 @@ class Zones:
                 rz.save()
                 await ctx.send('Raid messages disabled.')
             else:
-                raise commands.BadArgument('Unable to process argument `{}` for `{}`'.format(value, ctx.command))
+                raise commands.BadArgument(f'Unable to process argument `{value}` for `{ctx.command}`')
 
         else:
             await ctx.send('Setup has not been run for this channel.')
@@ -189,7 +189,7 @@ class Zones:
             ctx.rz.save()
             await ctx.rz.discord_destination.send('Raid messages disabled.')
         else:
-            raise commands.BadArgument('Unable to process argument `{}` for `{}`'.format(value, ctx.command))
+            raise commands.BadArgument(f'Unable to process argument `{value}` for `{ctx.command}`')
 
     @commands.command(hidden=True, usage='on/off')
     @commands.guild_only()
@@ -207,7 +207,7 @@ class Zones:
                 rz.save()
                 await ctx.send('Egg notifications disabled.')
             else:
-                raise commands.BadArgument('Unable to process argument `{}` for `{}`'.format(value, ctx.command))
+                raise commands.BadArgument(f'Unable to process argument `{value}` for `{ctx.command}`')
         else:
             await ctx.send('Setup has not been run for this channel.')
 
@@ -223,7 +223,7 @@ class Zones:
             ctx.rz.save()
             await ctx.rz.discord_destination.send('Egg notifications disabled.')
         else:
-            raise commands.BadArgument('Unable to process argument `{}` for `{}`'.format(value, ctx.command))
+            raise commands.BadArgument(f'Unable to process argument `{value}` for `{ctx.command}`')
 
     @commands.command(hidden=True)
     @commands.guild_only()
@@ -232,17 +232,15 @@ class Zones:
         """Displays the raid zones configuration for a channel."""
         if ctx.channel.id in ctx.zones.zones:
             rz = ctx.zones.zones[ctx.channel.id][0]
-            output = '''Here is the raid zone configuration for this channel:
-Name: `{}`
-Status: `{}`
-Coordinates: `{}, {}`
-Radius: `{}`
-Egg Notifications: `{}`
-Pokemon Filtering By Raid Level: `{}`
-Levels: `{}`
-Pokemon: `{}`'''.format(rz.name, rz.status, rz.latitude, rz.longitude, rz.radius, rz.egg_status,
-                        rz.pokemon_by_raid_level_status,
-                        rz.filters['raid_levels'], rz.filters['pokemon'])
+            output = f'''Here is the raid zone configuration for this channel:
+Name: `{rz.name}`
+Status: `{rz.status}`
+Coordinates: `{rz.latitude}, {rz.longitude}`
+Radius: `{rz.radius}`
+Egg Notifications: `{rz.egg_status}`
+Pokemon Filtering By Raid Level: `{rz.pokemon_by_raid_level_status}`
+Levels: `{rz.filters['raid_levels']}`
+Pokemon: `{rz.filters['pokemon']}`'''
             await ctx.send(output)
         else:
             await ctx.send('This channel is not configured as a raid zone.')
@@ -250,17 +248,15 @@ Pokemon: `{}`'''.format(rz.name, rz.status, rz.latitude, rz.longitude, rz.radius
     @config.command(name='info', hidden=True)
     async def info_sub(self, ctx):
         """Displays the raid zones configuration for a channel."""
-        output = '''Here is the raid zone configuration for this channel:
-Name: `{}`
-Status: `{}`
-Coordinates: `{}, {}`
-Radius: `{}`
-Egg Notifications: `{}`
-Pokemon Filtering By Raid Level: `{}`
-Levels: `{}`
-Pokemon: `{}`'''.format(ctx.rz.name, ctx.rz.status, ctx.rz.latitude, ctx.rz.longitude, ctx.rz.radius, ctx.rz.egg_status,
-                        ctx.rz.pokemon_by_raid_level_status,
-                        ctx.rz.filters['raid_levels'], ctx.rz.filters['pokemon'])
+        output = f'''Here is the raid zone configuration for this channel:
+Name: `{ctx.rz.name}`
+Status: `{ctx.rz.status}`
+Coordinates: `{ctx.rz.latitude}, {ctx.rz.longitude}`
+Radius: `{ctx.rz.radius}`
+Egg Notifications: `{ctx.rz.egg_status}`
+Pokemon Filtering By Raid Level: `{ctx.rz.pokemon_by_raid_level_status}`
+Levels: `{ctx.rz.filters['raid_levels']}`
+Pokemon: `{ctx.rz.filters['pokemon']}`'''
         await ctx.send(output)
 
     @commands.command(hidden=True)
@@ -269,7 +265,7 @@ Pokemon: `{}`'''.format(ctx.rz.name, ctx.rz.status, ctx.rz.latitude, ctx.rz.long
     async def filter(self, ctx, *pokemon_numbers: str):
         """Allows for a list of pokemon numbers to enable filtering. Use `0` to clear the filter."""
         if len(pokemon_numbers) == 0:
-            await ctx.author('Please provide at least one pokemon number for command `{}`'.format(ctx.command))
+            await ctx.author(f'Please provide at least one pokemon number for command `{ctx.command}`')
             return
         try:
             if ctx.channel.id in ctx.zones.zones:
@@ -281,18 +277,18 @@ Pokemon: `{}`'''.format(ctx.rz.name, ctx.rz.status, ctx.rz.latitude, ctx.rz.long
                 rz.filters['pokemon'].clear()
                 rz.filters['pokemon'] = sorted(new_filter)
                 rz.save()
-                await ctx.send('Updated pokemon filter list: `{}`'.format(rz.filters['pokemon']))
+                await ctx.send(f"Updated pokemon filter list: `{rz.filters['pokemon']}`")
             else:
                 await ctx.send('Setup has not been run for this channel.')
         except ValueError:
-            await ctx.send('Unable to process filter. Please verify your input: `{}`'.format(ctx.message.content))
+            await ctx.send(f'Unable to process filter. Please verify your input: `{ctx.message.content}`')
             pass
 
     @config.command(name='filter', hidden=True)
     async def filter_sub(self, ctx, *pokemon_numbers: str):
         """Allows for a list of pokemon numbers to enable filtering. Use `0` to clear the filter."""
         if len(pokemon_numbers) == 0:
-            await ctx.author('Please provide at least one pokemon number for command `{}`'.format(ctx.command))
+            await ctx.author(f'Please provide at least one pokemon number for command `{ctx.command}`')
             return
         try:
             new_filter = []
@@ -302,9 +298,9 @@ Pokemon: `{}`'''.format(ctx.rz.name, ctx.rz.status, ctx.rz.latitude, ctx.rz.long
             ctx.rz.filters['pokemon'].clear()
             ctx.rz.filters['pokemon'] = sorted(new_filter)
             ctx.rz.save()
-            await ctx.rz.discord_destination.send('Updated pokemon filter list: `{}`'.format(ctx.rz.filters['pokemon']))
+            await ctx.rz.discord_destination.send(f"Updated pokemon filter list: `{ctx.rz.filters['pokemon']}`")
         except ValueError:
-            await ctx.send('Unable to process filter. Please verify your input: `{}`'.format(ctx.message.content))
+            await ctx.send(f'Unable to process filter. Please verify your input: `{ctx.message.content}`')
             pass
 
     @commands.command(hidden=True)
@@ -313,7 +309,7 @@ Pokemon: `{}`'''.format(ctx.rz.name, ctx.rz.status, ctx.rz.latitude, ctx.rz.long
     async def level(self, ctx, *raid_levels: str):
         """Allows for a list of raid levels to accept. Use `0` to clear the filter."""
         if len(raid_levels) == 0:
-            await ctx.author('Please provide at least one raid level for command `{}`'.format(ctx.command))
+            await ctx.author(f'Please provide at least one raid level for command `{ctx.command}`')
             return
         try:
             if ctx.channel.id in ctx.zones.zones:
@@ -329,14 +325,14 @@ Pokemon: `{}`'''.format(ctx.rz.name, ctx.rz.status, ctx.rz.latitude, ctx.rz.long
             else:
                 await ctx.send('Setup has not been run for this channel.')
         except ValueError:
-            await ctx.send('Unable to process filter. Please verify your input: `{}`'.format(ctx.message.content))
+            await ctx.send(f'Unable to process filter. Please verify your input: `{ctx.message.content}`')
             pass
 
     @config.command(name='level', hidden=True)
     async def level_sub(self, ctx, *raid_levels: str):
         """Allows for a list of raid levels to accept. Use `0` to clear the filter."""
         if len(raid_levels) == 0:
-            await ctx.author('Please provide at least one raid level for command `{}`'.format(ctx.command))
+            await ctx.author(f'Please provide at least one raid level for command `{ctx.command}`')
             return
         try:
             new_filter = []
@@ -348,7 +344,7 @@ Pokemon: `{}`'''.format(ctx.rz.name, ctx.rz.status, ctx.rz.latitude, ctx.rz.long
             ctx.rz.save()
             await ctx.rz.discord_destination.send('Updated raid level filter list')
         except ValueError:
-            await ctx.send('Unable to process filter. Please verify your input: `{}`'.format(ctx.message.content))
+            await ctx.send(f'Unable to process filter. Please verify your input: `{ctx.message.content}`')
             pass
 
     @commands.command(hidden=True, usage='on/off')
@@ -367,7 +363,7 @@ Pokemon: `{}`'''.format(ctx.rz.name, ctx.rz.status, ctx.rz.latitude, ctx.rz.long
                 rz.save()
                 await ctx.send('Pokemon filtering by raid level disabled.')
             else:
-                raise commands.BadArgument('Unable to process argument `{}` for `{}`'.format(value, ctx.command))
+                raise commands.BadArgument(f'Unable to process argument `{value}` for `{ctx.command}`')
         else:
             await ctx.send('Setup has not been run for this channel.')
 
@@ -383,7 +379,7 @@ Pokemon: `{}`'''.format(ctx.rz.name, ctx.rz.status, ctx.rz.latitude, ctx.rz.long
             ctx.rz.save()
             await ctx.rz.discord_destination.send('Pokemon filtering by raid level disabled.')
         else:
-            raise commands.BadArgument('Unable to process argument `{}` for `{}`'.format(value, ctx.command))
+            raise commands.BadArgument(f'Unable to process argument `{value}` for `{ctx.command}`')
 
 
 def setup(bot):

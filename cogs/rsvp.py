@@ -39,7 +39,7 @@ class Rsvp:
                 ctx.bot_guild.default_role: self.private_channel_no_access,
                 ctx.bot_guild.me: self.private_channel_access
             }
-            private_raid_channel = await ctx.bot_guild.create_text_channel('raid-{}-chat'.format(raid.display_id),
+            private_raid_channel = await ctx.bot_guild.create_text_channel(f'raid-{raid.display_id}-chat',
                                                                            overwrites=overwrites)
             if ctx.bot.config.discord_raid_category is not None:
                 await private_raid_channel.edit(category=ctx.bot.config.discord_raid_category)
@@ -66,7 +66,7 @@ class Rsvp:
 
         # Add the user to the private channel for the raid
         await raid.private_discord_channel.set_permissions(author, overwrite=self.private_channel_access)
-        await raid.private_discord_channel.send('{}{}'.format(author.mention, result_tuple[0].details()))
+        await raid.private_discord_channel.send(f'{author.mention}{result_tuple[0].details()}')
 
         # Send message to the RSVP channel if the command was invoked publicly
         if ctx.rsvp_channel is not None and isinstance(ctx.channel, discord.abc.GuildChannel):
@@ -87,7 +87,7 @@ class Rsvp:
         if display_msg is not None:
             # Remove the user to the private channel for the raid
             await raid.private_discord_channel.set_permissions(author, overwrite=None)
-            await raid.private_discord_channel.send('**{}** is no longer attending'.format(author.display_name))
+            await raid.private_discord_channel.send(f'**{author.display_name}** is no longer attending')
 
             for msg in raid.messages:
                 await msg.edit(embed=raid.embed)

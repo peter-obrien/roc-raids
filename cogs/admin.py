@@ -55,7 +55,7 @@ class Admin:
                 ctx.bot.bot_only_channels.remove(ctx.channel)
             await ctx.send('Bot only commands disabled.')
         else:
-            await ctx.send('Command to change bot only status:\n\n`{}[on/off]`'.format(ctx.command))
+            await ctx.send(f'Command to change bot only status:\n\n`{ctx.command}[on/off]`')
 
     @botonly.after_invoke
     async def after_botonly_command(self, ctx):
@@ -98,7 +98,7 @@ class Admin:
 
             ctx.bot.config.time_zone = time_zone
             ctx.bot.config.save()
-            await ctx.send('Changed time zone to {}'.format(time_zone))
+            await ctx.send(f'Changed time zone to {time_zone}')
         else:
             raise commands.CommandInvokeError('User cannot run this command.')
 
@@ -109,7 +109,7 @@ class Admin:
         if ctx.author == ctx.guild.owner:
             ctx.bot.config.command = char
             ctx.bot.config.save()
-            await ctx.send('Changed command character to `{}`'.format(char))
+            await ctx.send(f'Changed command character to `{char}`')
         else:
             raise commands.CommandInvokeError('User cannot run this command.')
 
@@ -121,7 +121,7 @@ class Admin:
             ctx.bot.config.raid_category = category.id
             ctx.bot.config.save()
             ctx.bot.config.discord_raid_category = category
-            await ctx.send('Private raid channels will now be assigned to `{}`'.format(category.name))
+            await ctx.send(f'Private raid channels will now be assigned to `{category.name}`')
         else:
             raise commands.CommandInvokeError('User cannot run this command.')
 
@@ -132,12 +132,12 @@ class Admin:
             if ctx.rsvp_channel is None:
                 message_text = '**RSVP Channel not setup**'
             else:
-                message_text = 'RSVP Channel Name: {}'.format(ctx.rsvp_channel.name)
+                message_text = f'RSVP Channel Name: {ctx.rsvp_channel.name}'
             for rz in ctx.zones.zones.values():
                 if isinstance(rz.discord_destination, discord.Member):
-                    message_text += '\nRaid Zone User: {} (*{}*)'.format(rz.discord_destination.name, rz.status)
+                    message_text += f'\nRaid Zone User: {rz.discord_destination.name} (*{rz.status}*)'
                 else:
-                    message_text += '\nRaid Zone Channel: {} (*{}*)'.format(rz.discord_destination.name, rz.status)
+                    message_text += f'\nRaid Zone Channel: {rz.discord_destination.name} (*{rz.status}*)'
             await ctx.send(message_text)
         else:
             raise commands.CommandInvokeError('User cannot run this command.')

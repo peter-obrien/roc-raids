@@ -40,7 +40,7 @@ class RaidManager:
                         msg = await channel.get_message(rm.message)
                         raid.messages.append(msg)
                     else:
-                        print('Could not find channel raid message {}'.format(rm.id))
+                        print(f'Could not find channel raid message {rm.id}')
                 except discord.errors.NotFound:
                     pass
 
@@ -72,22 +72,21 @@ class RaidManager:
 
     def get_raid(self, raid_id_str):
         if not raid_id_str.isdigit():
-            raise commands.BadArgument('Raid #{} does not exist.'.format(raid_id_str))
+            raise commands.BadArgument(f'Raid #{raid_id_str} does not exist.')
 
         raid_id_int = int(raid_id_str)
 
         if raid_id_int not in self.raid_map:
             if raid_id_int <= self.raid_seed:
-                raise commands.BadArgument('Raid #{} has expired.'.format(raid_id_str))
+                raise commands.BadArgument(f'Raid #{raid_id_str} has expired.')
             else:
-                raise commands.BadArgument('Raid #{} does not exist.'.format(raid_id_str))
+                raise commands.BadArgument(f'Raid #{raid_id_str} does not exist.')
         return self.raid_map[raid_id_int]
 
     def add_participant(self, raid, user_id, user_name, party_size='1', notes=None):
         if not party_size.isdigit():
             raise commands.BadArgument(
-                "The party size entered [{}] is not a number. If you're attending alone, please use 1.".format(
-                    party_size))
+                f"The party size entered [{party_size}] is not a number. If you're attending alone, please use 1.")
         party_size = int(party_size)
         participant = RaidParticipant(raid=raid, user_id=user_id, user_name=user_name, party_size=party_size,
                                       notes=notes)
@@ -101,22 +100,19 @@ class RaidManager:
         raid.participants.add(participant)
 
         self.update_embed_participants(raid)
-        party_descriptor = (' +{} '.format(str(party_size - 1)) if party_size > 1 else '')
+        if party_size > 1:
+            party_descriptor = f' +{party_size - 1} '
+        else:
+            party_descriptor = ''
 
         if raid.pokemon_name is None:
             pokemon_or_raid_level = f'a Level {raid.raid_level}'
         else:
             pokemon_or_raid_level = raid.pokemon_name
         if already_in_raid:
-            return participant, "{} {}has __modified__ their RSVP to {} Raid #{} at {}".format(user_name,
-                                                                                               party_descriptor,
-                                                                                               pokemon_or_raid_level,
-                                                                                               raid.display_id,
-                                                                                               raid.gym_name)
+            return participant, f"{user_name} {party_descriptor}has __modified__ their RSVP to {pokemon_or_raid_level} Raid #{raid.display_id} at {raid.gym_name}"
         else:
-            return participant, "{} {}has RSVP'd to {} Raid #{} at {}".format(user_name, party_descriptor,
-                                                                              pokemon_or_raid_level,
-                                                                              raid.display_id, raid.gym_name)
+            return participant, f"{user_name} {party_descriptor}has RSVP'd to {pokemon_or_raid_level} Raid #{raid.display_id} at {raid.gym_name}"
 
     def remove_participant(self, raid, user_id, user_name):
         temp_raider = RaidParticipant(raid=raid, user_id=user_id)
@@ -127,7 +123,7 @@ class RaidManager:
 
             raid.participants.remove(temp_raider)
             self.update_embed_participants(raid)
-            return '{} is no longer attending Raid #{}'.format(user_name, raid.display_id)
+            return f'{user_name} is no longer attending Raid #{raid.display_id}'
         else:
             return None
 
@@ -141,21 +137,18 @@ class RaidManager:
         return result
 
     def get_participant_printout(self, raid):
-        result = 'Here are the ' + str(self.get_participant_number(raid)) + ' participants for Raid #' + str(
-            raid.display_id) + ':'
+        result = f'Here are the {self.get_participant_number(raid)} participants for Raid #{raid.display_id}:'
         for raider in raid.participants:
             result += '\n\t' + str(raider)
         return result
 
     async def build_raid_embed(self, raid):
         if 'quick_move' in raid.data:
-            desc = '{}\n\n**Moves:** {}/{}\n**Ends:** *{}*'.format(raid.gym_name, raid.data['quick_move'],
-                                                                   raid.data['charge_move'],
-                                                                   localtime(raid.expiration).strftime(time_format))
+            desc = f"{raid.gym_name}\n\n**Moves:** {raid.data['quick_move']}/{raid.data['charge_move']}\n**Ends:** *{localtime(raid.expiration).strftime(time_format)}*"
         else:
-            desc = '{}\n\n**Ends:** *{}*'.format(raid.gym_name, localtime(raid.expiration).strftime(time_format))
+            desc = f'{raid.gym_name}\n\n**Ends:** *{localtime(raid.expiration).strftime(time_format)}*'
 
-        result = discord.Embed(title='{}: Raid #{}'.format(raid.pokemon_name, raid.display_id), url=raid.data['url'],
+        result = discord.Embed(title=f'{raid.pokemon_name}: Raid #{raid.display_id}', url=raid.data['url'],
                                description=desc, colour=embed_color)
 
         if 'image' in raid.data:
@@ -173,10 +166,9 @@ class RaidManager:
         return result
 
     async def build_egg_embed(self, raid):
-        desc = '{}\n\n**Hatches:** *{}*'.format(raid.gym_name, localtime(raid.hatch_time).strftime(time_format))
+        desc = f'{raid.gym_name}\n\n**Hatches:** *{localtime(raid.hatch_time).strftime(time_format)}*'
 
-        result = discord.Embed(title='Level {} egg: Raid #{}'.format(raid.raid_level, raid.display_id),
-                               url=raid.data['url'],
+        result = discord.Embed(title=f'Level {raid.raid_level} egg: Raid #{raid.display_id}', url=raid.data['url'],
                                description=desc, colour=embed_color)
 
         if 'image' in raid.data:
@@ -218,7 +210,7 @@ class RaidZoneManager:
                 rz.discord_destination = channel
                 self.zones[rz.destination].append(rz)
             else:
-                print('Unable to load raid zone for id {} destination {}'.format(rz.id, rz.destination))
+                print(f'Unable to load raid zone for id rz.id destination {rz.destination}')
 
     async def send_to_raid_zones(self, raid):
         objects_to_save = []
@@ -232,7 +224,7 @@ class RaidZoneManager:
                                 RaidMessage(raid=raid, channel=raid_message.channel.id, message=raid_message.id))
                             raid.messages.append(raid_message)
                     except discord.errors.Forbidden:
-                        print('Unable to send raid to channel {}. The bot does not have permission.'.format(
-                            rz.discord_destination.name))
+                        print(
+                            f'Unable to send raid to channel {rz.discord_destination.name}. The bot does not have permission.')
                         pass
         return objects_to_save
