@@ -89,17 +89,31 @@ class RaidManager:
         self.raid_map.pop(raid.display_id, None)
 
     def get_raid(self, raid_id_str):
-        if not raid_id_str.isdigit():
-            raise commands.BadArgument(f'Raid #{raid_id_str} does not exist.')
+        if raid_id_str.lower().startswith('ex'):
+            ex_raid_id_str = int(raid_id_str[2:])
+            if not ex_raid_id_str.isdigit():
+                raise commands.BadArgument(f'EX Raid #{ex_raid_id_str} does not exist.')
 
-        raid_id_int = int(raid_id_str)
+            raid_id_int = int(ex_raid_id_str)
 
-        if raid_id_int not in self.raid_map:
-            if raid_id_int <= self.raid_seed:
-                raise commands.BadArgument(f'Raid #{raid_id_str} has expired.')
-            else:
+            if raid_id_int not in self.exclusive_raid_map:
+                if raid_id_int <= self.exclusive_raid_seed:
+                    raise commands.BadArgument(f'EX Raid #{raid_id_str} has expired.')
+                else:
+                    raise commands.BadArgument(f'Raid #{raid_id_str} does not exist.')
+            return self.exclusive_raid_map[raid_id_int]
+        else:
+            if not raid_id_str.isdigit():
                 raise commands.BadArgument(f'Raid #{raid_id_str} does not exist.')
-        return self.raid_map[raid_id_int]
+
+            raid_id_int = int(raid_id_str)
+
+            if raid_id_int not in self.raid_map:
+                if raid_id_int <= self.raid_seed:
+                    raise commands.BadArgument(f'Raid #{raid_id_str} has expired.')
+                else:
+                    raise commands.BadArgument(f'Raid #{raid_id_str} does not exist.')
+            return self.raid_map[raid_id_int]
 
     def add_participant(self, raid, user_id, user_name, party_size='1', notes=None):
         if not party_size.isdigit():
