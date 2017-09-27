@@ -17,6 +17,7 @@ class Raid(models.Model):
     private_channel = models.BigIntegerField(null=True)
     is_egg = models.BooleanField(default=False)
     hatch_time = models.DateTimeField(null=True)
+    is_exclusive = models.BooleanField(default=False)
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
