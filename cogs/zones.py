@@ -374,6 +374,55 @@ Pokemon: `{ctx.rz.filters['pokemon']}`'''
         else:
             raise commands.BadArgument(f'Unable to process argument `{value}` for `{ctx.command}`')
 
+    @commands.command(hidden=True)
+    @commands.guild_only()
+    @commands.has_permissions(manage_channels=True)
+    async def delete_zone(self, ctx):
+        """Deletes a raid zone"""
+        if ctx.channel.id in ctx.zones.zones:
+            rz = ctx.zones.zones[ctx.channel.id][0]
+            author = ctx.author
+            channel = ctx.channel
+            await ctx.send(f'Are you sure you want to delete `{rz.name}`? Enter `yes` to confirm.')
+
+            def check(m):
+                return m.channel == channel and m.author == author
+
+            response = await ctx.bot.wait_for('message', check=check)
+
+            if response.content.lower() == 'yes':
+                await ctx.send(f'Zone `{rz.name}` deleted')
+                ctx.zones.zones[ctx.channel.id].remove(rz)
+                if len(ctx.zones.zones[ctx.channel.id]) == 0:
+                    ctx.zones.zones.pop(ctx.channel.id, None)
+                rz.delete()
+            else:
+                await ctx.send('Zone not deleted')
+        else:
+            await ctx.send('There is no raid zone to delete.')
+
+    @config.command(name='delete_zone', hidden=True)
+    async def delete_zone_sub(self, ctx):
+        """Deletes a raid zone"""
+        rz = ctx.rz
+        author = ctx.author
+        channel = ctx.channel
+        await ctx.send(f'Are you sure you want to delete `{rz.name}`? Enter `yes` to confirm.')
+
+        def check(m):
+            return m.channel == channel and m.author == author
+
+        response = await ctx.bot.wait_for('message', check=check)
+
+        if response.content.lower() == 'yes':
+            await ctx.send(f'Zone `{rz.name}` deleted')
+            ctx.zones.zones[ctx.channel.id].remove(rz)
+            if len(ctx.zones.zones[ctx.channel.id]) == 0:
+                ctx.zones.zones.pop(ctx.channel.id, None)
+            rz.delete()
+        else:
+            await ctx.send('Zone not deleted')
+
 
 def setup(bot):
     bot.add_cog(Zones(bot))
