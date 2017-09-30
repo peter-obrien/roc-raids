@@ -57,8 +57,10 @@ class RaidManager:
 
     def create_exclusive_raid(self, gym_name, expiration, latitude, longitude):
         self.exclusive_raid_seed += 1
+        data = dict()
+        data['url'] = f'http://maps.google.com/maps?q={latitude},{longitude}'
         raid = Raid(display_id=self.exclusive_raid_seed, gym_name=gym_name, raid_level=0, latitude=latitude,
-                    longitude=longitude, expiration=expiration, is_exclusive=True)
+                    longitude=longitude, expiration=expiration, is_exclusive=True, data=data)
         self.exclusive_raid_map[raid.display_id] = raid
         self.exclusive_hashed_raids[hash(raid)] = raid
         raid.save()
