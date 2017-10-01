@@ -212,6 +212,12 @@ class RaidCoordinator(commands.AutoShardedBot):
                         raid.active = False
                         raid.save()
                         expired_raids.append(raid)
+                for raid in self.raids.exclusive_raid_map.values():
+                    if current_time > raid.expiration:
+                        raid.active = False
+                        raid.save()
+                        expired_raids.append(raid)
+
             # Process expired raids
             for raid in expired_raids:
                 for message in raid.messages:
