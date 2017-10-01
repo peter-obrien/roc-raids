@@ -2,7 +2,7 @@ from decimal import Decimal
 
 import discord
 from discord.ext import commands
-from django.utils.timezone import activate
+from django.utils.timezone import activate, make_aware
 
 from cogs.utils.converters import UserRaidEndTime
 from orm.models import BotOnlyChannel
@@ -154,7 +154,10 @@ class Admin:
 
         Expiration time must follow the format MM/DD/YY 24H
         """
-        await ctx.send(f'Creating EX raid for {gym_name} at ({latitude}, {longitude}) ending on {expiration}')
+        raid = await ctx.raids.create_exclusive_raid(gym_name=gym_name, latitude=latitude, longitude=longitude,
+                                                     expiration=make_aware(expiration))
+        await ctx.zones.send_to_raid_zones(raid)
+        await ctx.send(f'Created EX raid #{raid.display_id}')
 
 
 def setup(bot):
