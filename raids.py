@@ -55,15 +55,23 @@ class RaidManager:
                 except discord.errors.NotFound:
                     pass
 
-    def create_exclusive_raid(self, gym_name, expiration, latitude, longitude):
+    async def create_exclusive_raid(self, gym_name, expiration, latitude, longitude):
         self.exclusive_raid_seed += 1
         data = dict()
         data['url'] = f'http://maps.google.com/maps?q={latitude},{longitude}'
-        raid = Raid(display_id=self.exclusive_raid_seed, gym_name=gym_name, raid_level=0, latitude=latitude,
-                    longitude=longitude, expiration=expiration, is_exclusive=True, data=data)
+        thumbnail = dict()
+        thumbnail['url'] = 'https://raw.githubusercontent.com/peter-obrien/organizer/ex_raids/resources/images/ex_raid_pass.png'
+        thumbnail['height'] = '128'
+        thumbnail['width'] = '128'
+        thumbnail['proxy_url'] = ''
+        data['thumbnail'] = thumbnail
+        raid = Raid(display_id=self.exclusive_raid_seed, gym_name=gym_name, raid_level=0, pokemon_number=0,
+                    latitude=latitude, longitude=longitude, expiration=expiration, is_exclusive=True, data=data)
         self.exclusive_raid_map[raid.display_id] = raid
         self.exclusive_hashed_raids[hash(raid)] = raid
         raid.save()
+        raid.embed = await self.build_raid_embed(raid)
+        return raid
 
     def create_raid(self, pokemon_name, pokemon_number, raid_level, gym_name, expiration, latitude, longitude,
                     hatch_time):
@@ -96,7 +104,7 @@ class RaidManager:
 
     def get_raid(self, raid_id_str):
         if raid_id_str.lower().startswith('ex'):
-            ex_raid_id_str = int(raid_id_str[2:])
+            ex_raid_id_str = raid_id_str[2:]
             if not ex_raid_id_str.isdigit():
                 raise commands.BadArgument(f'EX Raid #{ex_raid_id_str} does not exist.')
 
@@ -143,7 +151,9 @@ class RaidManager:
         else:
             party_descriptor = ''
 
-        if raid.pokemon_name is None:
+        if raid.is_exclusive:
+            pokemon_or_raid_level = 'EX'
+        elif raid.pokemon_name is None:
             pokemon_or_raid_level = f'a Level {raid.raid_level}'
         else:
             pokemon_or_raid_level = raid.pokemon_name
@@ -186,7 +196,12 @@ class RaidManager:
         else:
             desc = f'{raid.gym_name}\n\n**Ends:** *{localtime(raid.expiration).strftime(time_format)}*'
 
-        result = discord.Embed(title=f'{raid.pokemon_name}: Raid #{raid.display_id}', url=raid.data['url'],
+        if raid.is_exclusive:
+            title = f'EX Raid #{raid.display_id}'
+        else:
+            title = f'{raid.pokemon_name}: Raid #{raid.display_id}'
+
+        result = discord.Embed(title=title, url=raid.data['url'],
                                description=desc, colour=embed_color)
 
         if 'image' in raid.data:
