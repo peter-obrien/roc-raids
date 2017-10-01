@@ -237,8 +237,8 @@ class RaidCoordinator(commands.AutoShardedBot):
                 # Get the next reset time.
                 self.reset_date = self.reset_date + timedelta(hours=24)
                 self.raids.reset()
-                # Clean up any raids that may still be active in the database
-                for raid in Raid.objects.filter(active=True):
+                # Clean up any non exclusive raids that may still be active in the database
+                for raid in Raid.objects.filter(active=True, is_exclusive=False):
                     raid.active = False
                     raid.save()
 
