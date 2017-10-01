@@ -96,9 +96,9 @@ class RaidCoordinator(commands.AutoShardedBot):
         if len(config_results) == 0:
             gc = GuildConfig(guild=guild_id)
             gc.save()
-            self.config = gc
+            self.config: GuildConfig = gc
         else:
-            self.config = config_results[0]
+            self.config: GuildConfig = config_results[0]
 
         # create the background task and run it in the background
         self.bg_task = self.loop.create_task(self.background_cleanup())
@@ -130,10 +130,10 @@ class RaidCoordinator(commands.AutoShardedBot):
         self.bot_guild = self.get_guild(guild_id)
         self.rsvp_channel = self.bot_guild.get_channel(rsvp_channel_id)
         self.config.discord_rsvp_channel = self.rsvp_channel
+        self.config.discord_ex_raid_channel = self.bot_guild.get_channel(self.config.ex_raid_channel)
 
         for cat in self.bot_guild.categories:
             if self.config.raid_category == cat.id:
-                print(f'Found raid category: {cat.name}')
                 self.config.discord_raid_category = cat
                 break
 

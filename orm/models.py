@@ -1,6 +1,7 @@
+from math import sin, cos, sqrt, atan2, radians
+
 from django.contrib.postgres.fields import JSONField
 from django.db import models
-from math import sin, cos, sqrt, atan2, radians
 
 
 class Raid(models.Model):
@@ -167,9 +168,11 @@ class GuildConfig(models.Model):
     command = models.CharField(max_length=1, default='!')
     time_zone = models.CharField(max_length=50, default='UTC')
     raid_category = models.BigIntegerField(null=True)
+    ex_raid_channel = models.BigIntegerField(null=True)
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.discord_raid_category = None
         self.discord_alarm_source = None
         self.discord_rsvp_channel = None
+        self.discord_ex_raid_channel = None
