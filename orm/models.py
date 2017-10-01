@@ -149,13 +149,13 @@ class RaidZone(models.Model):
 
     def _filter_pokemon(self, raid):
         if len(self.filters['pokemon']) > 0:
-            return int(raid.pokemon_number) in self.filters['pokemon']
+            return raid.pokemon_number is not None and int(raid.pokemon_number) in self.filters['pokemon']
         else:
             return True
 
     def _filter_raid_level(self, raid):
         if len(self.filters['raid_levels']) > 0:
-            return int(raid.raid_level) in self.filters['raid_levels']
+            return raid.raid_level is not None and int(raid.raid_level) in self.filters['raid_levels']
         else:
             return True
 
