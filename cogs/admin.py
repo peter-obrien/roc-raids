@@ -5,7 +5,7 @@ from discord.ext import commands
 from django.utils.timezone import activate, make_aware
 
 from cogs.utils.converters import UserRaidEndTime
-from orm.models import BotOnlyChannel
+from orm.models import BotOnlyChannel, RaidMessage
 
 
 class Admin:
@@ -156,7 +156,10 @@ class Admin:
         """
         raid = await ctx.raids.create_exclusive_raid(gym_name=gym_name, latitude=latitude, longitude=longitude,
                                                      expiration=make_aware(expiration))
-        await ctx.zones.send_to_raid_zones(raid)
+        # Send the ex raid to any compatible raid zones.
+        objects_to_save = await ctx.zones.send_to_raid_zones(raid)
+        RaidMessage.objects.bulk_create(objects_to_save)
+
         await ctx.send(f'Created EX raid #{raid.display_id}')
 
 
