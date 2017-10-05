@@ -87,6 +87,7 @@ class RaidManager:
         self.raid_seed += 1
         raid.display_id = self.raid_seed
         self.hashed_active_raids[hash(raid)] = raid
+        self.raid_map[raid.display_id] = raid
         raid.save()
         return raid
 
