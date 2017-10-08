@@ -27,6 +27,12 @@ class RaidManager:
 
     async def load_from_database(self, bot):
 
+        # Ensure the collections are empty before loading data from the database
+        self.hashed_active_raids = dict()
+        self.raid_map = dict()
+        self.exclusive_hashed_raids = dict()
+        self.exclusive_raid_map = dict()
+
         for raid in Raid.objects.filter(active=True):
             if raid.is_exclusive:
                 self.exclusive_hashed_raids[hash(raid)] = raid
@@ -256,6 +262,10 @@ class RaidZoneManager:
         return rz
 
     async def load_from_database(self, bot):
+
+        # Ensure the collections are empty before loading data from the database
+        self.zones = defaultdict(list)
+
         for rz in RaidZone.objects.all():
             channel = bot.get_channel(int(rz.destination))
             if channel is None:
