@@ -1,6 +1,7 @@
+from math import sin, cos, sqrt, atan2, radians
+
 from django.contrib.postgres.fields import JSONField
 from django.db import models
-from math import sin, cos, sqrt, atan2, radians
 
 
 class Raid(models.Model):
@@ -17,6 +18,7 @@ class Raid(models.Model):
     private_channel = models.BigIntegerField(null=True)
     is_egg = models.BooleanField(default=False)
     hatch_time = models.DateTimeField(null=True)
+    is_exclusive = models.BooleanField(default=False)
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -148,13 +150,13 @@ class RaidZone(models.Model):
 
     def _filter_pokemon(self, raid):
         if len(self.filters['pokemon']) > 0:
-            return int(raid.pokemon_number) in self.filters['pokemon']
+            return raid.pokemon_number is not None and int(raid.pokemon_number) in self.filters['pokemon']
         else:
             return True
 
     def _filter_raid_level(self, raid):
         if len(self.filters['raid_levels']) > 0:
-            return int(raid.raid_level) in self.filters['raid_levels']
+            return raid.raid_level is not None and int(raid.raid_level) in self.filters['raid_levels']
         else:
             return True
 
@@ -166,9 +168,11 @@ class GuildConfig(models.Model):
     command = models.CharField(max_length=1, default='!')
     time_zone = models.CharField(max_length=50, default='UTC')
     raid_category = models.BigIntegerField(null=True)
+    ex_raid_channel = models.BigIntegerField(null=True)
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.discord_raid_category = None
         self.discord_alarm_source = None
         self.discord_rsvp_channel = None
+        self.discord_ex_raid_channel = None

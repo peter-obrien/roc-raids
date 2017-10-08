@@ -2,15 +2,8 @@ from decimal import Decimal, InvalidOperation
 
 from discord.ext import commands
 
+from cogs.utils.converters import ChannelOrMember
 from orm.models import RaidZone
-
-
-class ChannelOrMember(commands.Converter):
-    async def convert(self, ctx, argument):
-        try:
-            return await commands.TextChannelConverter().convert(ctx, argument)
-        except commands.BadArgument:
-            return await commands.MemberConverter().convert(ctx, argument)
 
 
 class Zones:
@@ -73,11 +66,11 @@ class Zones:
                 rz.latitude = lat
                 rz.longitude = lon
                 rz.save()
-                await ctx.send('Raid zone coordinates updated')
+                await ctx.send(f'Raid zone coordinates updated: {lat}, {lon}')
             else:
                 rz = ctx.zones.create_zone(ctx.guild.id, ctx.channel.id, lat, lon)
                 rz.discord_destination = ctx.channel
-                await ctx.send('Raid zone created')
+                await ctx.send(f'Raid zone created: {lat}, {lon}')
         except Exception as e:
             print(e)
             await ctx.send(f'There was an error handling your request.\n\n`{ctx.message.content}`')
@@ -93,11 +86,13 @@ class Zones:
                 ctx.rz.latitude = lat
                 ctx.rz.longitude = lon
                 ctx.rz.save()
-                await ctx.rz.discord_destination.send('Raid zone coordinates updated')
+                await ctx.rz.discord_destination.send(f'Raid zone coordinates updated: {lat}, {lon}')
+                await ctx.send(f'Raid zone coordinates updated: {lat}, {lon}')
             else:
                 rz = ctx.zones.create_zone(ctx.guild.id, ctx.rz.id, lat, lon)
                 rz.discord_destination = ctx.rz
-                await ctx.rz.send('Raid zone created')
+                await ctx.rz.send(f'Raid zone created: {lat}, {lon}')
+                await ctx.send(f'Raid zone created: {lat}, {lon}')
         except Exception as e:
             print(e)
             await ctx.send(f'There was an error handling your request.\n\n`{ctx.message.content}`')
@@ -111,7 +106,7 @@ class Zones:
             rz = ctx.zones.zones[ctx.channel.id][0]
             rz.name = new_name
             rz.save()
-            await ctx.send('Zone renamed')
+            await ctx.send(f'Zone renamed to {new_name}')
         else:
             await ctx.send('Setup has not been run for this channel.')
 
@@ -120,7 +115,8 @@ class Zones:
         """Changes the name of a zone."""
         ctx.rz.name = new_name
         ctx.rz.save()
-        await ctx.rz.discord_destination.send('Zone renamed')
+        await ctx.rz.discord_destination.send(f'Zone renamed to {new_name}')
+        await ctx.send(f'Zone renamed to {new_name}')
 
     @commands.command(hidden=True, usage='xxx.x')
     @commands.guild_only()
@@ -136,7 +132,7 @@ class Zones:
                     rz = ctx.zones.zones[ctx.channel.id][0]
                     rz.radius = radius
                     rz.save()
-                    await ctx.send('Radius updated')
+                    await ctx.send(f'Radius updated to {radius}')
                 else:
                     await ctx.send('Setup has not been run for this channel.')
         except InvalidOperation:
@@ -152,7 +148,8 @@ class Zones:
             else:
                 ctx.rz.radius = radius
                 ctx.rz.save()
-                await ctx.rz.discord_destination.send('Radius updated')
+                await ctx.rz.discord_destination.send(f'Radius updated to {radius}')
+                await ctx.send(f'Radius updated to {radius}')
         except InvalidOperation:
             raise commands.BadArgument(f'Invalid radius: {value}')
 
@@ -184,10 +181,12 @@ class Zones:
             ctx.rz.active = True
             ctx.rz.save()
             await ctx.rz.discord_destination.send('Raid messages enabled.')
+            await ctx.send('Raid messages enabled.')
         elif value == 'off':
             ctx.rz.active = False
             ctx.rz.save()
             await ctx.rz.discord_destination.send('Raid messages disabled.')
+            await ctx.send('Raid messages disabled.')
         else:
             raise commands.BadArgument(f'Unable to process argument `{value}` for `{ctx.command}`')
 
@@ -218,10 +217,12 @@ class Zones:
             ctx.rz.filter_eggs = True
             ctx.rz.save()
             await ctx.rz.discord_destination.send('Egg notifications enabled.')
+            await ctx.send('Egg notifications enabled.')
         elif value.lower() == 'off':
             ctx.rz.filter_eggs = False
             ctx.rz.save()
             await ctx.rz.discord_destination.send('Egg notifications disabled.')
+            await ctx.send('Egg notifications disabled.')
         else:
             raise commands.BadArgument(f'Unable to process argument `{value}` for `{ctx.command}`')
 
@@ -299,6 +300,7 @@ Pokemon: `{ctx.rz.filters['pokemon']}`'''
             ctx.rz.filters['pokemon'] = sorted(new_filter)
             ctx.rz.save()
             await ctx.rz.discord_destination.send(f"Updated pokemon filter list: `{ctx.rz.filters['pokemon']}`")
+            await ctx.send(f"Updated pokemon filter list: `{ctx.rz.filters['pokemon']}`")
         except ValueError:
             await ctx.send(f'Unable to process filter. Please verify your input: `{ctx.message.content}`')
             pass
@@ -321,7 +323,7 @@ Pokemon: `{ctx.rz.filters['pokemon']}`'''
                 rz.filters['raid_levels'].clear()
                 rz.filters['raid_levels'] = new_filter
                 rz.save()
-                await ctx.send('Updated raid level filter list')
+                await ctx.send(f"Updated raid level filter list: `{ctx.rz.filters['raid_levels']}`")
             else:
                 await ctx.send('Setup has not been run for this channel.')
         except ValueError:
@@ -342,7 +344,8 @@ Pokemon: `{ctx.rz.filters['pokemon']}`'''
             ctx.rz.filters['raid_levels'].clear()
             ctx.rz.filters['raid_levels'] = new_filter
             ctx.rz.save()
-            await ctx.rz.discord_destination.send('Updated raid level filter list')
+            await ctx.rz.discord_destination.send(f"Updated raid level filter list: `{ctx.rz.filters['raid_levels']}`")
+            await ctx.send(f"Updated raid level filter list: `{ctx.rz.filters['raid_levels']}`")
         except ValueError:
             await ctx.send(f'Unable to process filter. Please verify your input: `{ctx.message.content}`')
             pass
@@ -374,12 +377,63 @@ Pokemon: `{ctx.rz.filters['pokemon']}`'''
             ctx.rz.filter_pokemon_by_raid_level = True
             ctx.rz.save()
             await ctx.rz.discord_destination.send('Pokemon filtering by raid level enabled.')
+            await ctx.send('Pokemon filtering by raid level enabled.')
         elif value.lower() == 'off':
             ctx.rz.filter_pokemon_by_raid_level = False
             ctx.rz.save()
             await ctx.rz.discord_destination.send('Pokemon filtering by raid level disabled.')
+            await ctx.send('Pokemon filtering by raid level disabled.')
         else:
             raise commands.BadArgument(f'Unable to process argument `{value}` for `{ctx.command}`')
+
+    @commands.command(hidden=True)
+    @commands.guild_only()
+    @commands.has_permissions(manage_channels=True)
+    async def delete_zone(self, ctx):
+        """Deletes a raid zone"""
+        if ctx.channel.id in ctx.zones.zones:
+            rz = ctx.zones.zones[ctx.channel.id][0]
+            author = ctx.author
+            channel = ctx.channel
+            await ctx.send(f'Are you sure you want to delete `{rz.name}`? Enter `yes` to confirm.')
+
+            def check(m):
+                return m.channel == channel and m.author == author
+
+            response = await ctx.bot.wait_for('message', check=check)
+
+            if response.content.lower() == 'yes':
+                await ctx.send(f'Zone `{rz.name}` deleted')
+                ctx.zones.zones[ctx.channel.id].remove(rz)
+                if len(ctx.zones.zones[ctx.channel.id]) == 0:
+                    ctx.zones.zones.pop(ctx.channel.id, None)
+                rz.delete()
+            else:
+                await ctx.send('Zone not deleted')
+        else:
+            await ctx.send('There is no raid zone to delete.')
+
+    @config.command(name='delete_zone', hidden=True)
+    async def delete_zone_sub(self, ctx):
+        """Deletes a raid zone"""
+        rz = ctx.rz
+        author = ctx.author
+        channel = ctx.channel
+        await ctx.send(f'Are you sure you want to delete `{rz.name}`? Enter `yes` to confirm.')
+
+        def check(m):
+            return m.channel == channel and m.author == author
+
+        response = await ctx.bot.wait_for('message', check=check)
+
+        if response.content.lower() == 'yes':
+            await ctx.send(f'Zone `{rz.name}` deleted')
+            ctx.zones.zones[ctx.channel.id].remove(rz)
+            if len(ctx.zones.zones[ctx.channel.id]) == 0:
+                ctx.zones.zones.pop(ctx.channel.id, None)
+            rz.delete()
+        else:
+            await ctx.send('Zone not deleted')
 
 
 def setup(bot):

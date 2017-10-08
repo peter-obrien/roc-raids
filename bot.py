@@ -96,9 +96,9 @@ class RaidCoordinator(commands.AutoShardedBot):
         if len(config_results) == 0:
             gc = GuildConfig(guild=guild_id)
             gc.save()
-            self.config = gc
+            self.config: GuildConfig = gc
         else:
-            self.config = config_results[0]
+            self.config: GuildConfig = config_results[0]
 
         # create the background task and run it in the background
         self.bg_task = self.loop.create_task(self.background_cleanup())
@@ -130,10 +130,10 @@ class RaidCoordinator(commands.AutoShardedBot):
         self.bot_guild = self.get_guild(guild_id)
         self.rsvp_channel = self.bot_guild.get_channel(rsvp_channel_id)
         self.config.discord_rsvp_channel = self.rsvp_channel
+        self.config.discord_ex_raid_channel = self.bot_guild.get_channel(self.config.ex_raid_channel)
 
         for cat in self.bot_guild.categories:
             if self.config.raid_category == cat.id:
-                print(f'Found raid category: {cat.name}')
                 self.config.discord_raid_category = cat
                 break
 
@@ -212,6 +212,12 @@ class RaidCoordinator(commands.AutoShardedBot):
                         raid.active = False
                         raid.save()
                         expired_raids.append(raid)
+                for raid in self.raids.exclusive_raid_map.values():
+                    if current_time > raid.expiration:
+                        raid.active = False
+                        raid.save()
+                        expired_raids.append(raid)
+
             # Process expired raids
             for raid in expired_raids:
                 for message in raid.messages:
@@ -231,8 +237,8 @@ class RaidCoordinator(commands.AutoShardedBot):
                 # Get the next reset time.
                 self.reset_date = self.reset_date + timedelta(hours=24)
                 self.raids.reset()
-                # Clean up any raids that may still be active in the database
-                for raid in Raid.objects.filter(active=True):
+                # Clean up any non exclusive raids that may still be active in the database
+                for raid in Raid.objects.filter(active=True, is_exclusive=False):
                     raid.active = False
                     raid.save()
 

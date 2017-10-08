@@ -39,8 +39,12 @@ class Rsvp:
                 ctx.bot_guild.default_role: self.private_channel_no_access,
                 ctx.bot_guild.me: self.private_channel_access
             }
-            private_raid_channel = await ctx.bot_guild.create_text_channel(f'raid-{raid.display_id}-chat',
-                                                                           overwrites=overwrites)
+            if raid.is_exclusive:
+                private_raid_channel = await ctx.bot_guild.create_text_channel(f'ex-raid-{raid.display_id}-chat',
+                                                                               overwrites=overwrites)
+            else:
+                private_raid_channel = await ctx.bot_guild.create_text_channel(f'raid-{raid.display_id}-chat',
+                                                                               overwrites=overwrites)
             if ctx.bot.config.discord_raid_category is not None:
                 await private_raid_channel.edit(category=ctx.bot.config.discord_raid_category)
 

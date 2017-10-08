@@ -1,8 +1,11 @@
+from decimal import Decimal
+
 import discord
 from discord.ext import commands
-from django.utils.timezone import activate
+from django.utils.timezone import activate, make_aware
 
-from orm.models import BotOnlyChannel
+from cogs.utils.converters import UserRaidEndTime
+from orm.models import BotOnlyChannel, RaidMessage
 
 
 class Admin:
@@ -125,6 +128,18 @@ class Admin:
         else:
             raise commands.CommandInvokeError('User cannot run this command.')
 
+    @commands.command(name='set_ex_raid_channel', hidden=True)
+    @commands.guild_only()
+    async def set_exclusive_raid_channel(self, ctx):
+        """Make the channel where the command is run the destination of all EX raids."""
+        if ctx.author == ctx.guild.owner:
+            ctx.bot.config.ex_raid_channel = ctx.channel.id
+            ctx.bot.config.save()
+            ctx.bot.config.discord_ex_raid_channel = ctx.channel
+            await ctx.send('This channel is now the EX raid destination channel.')
+        else:
+            raise commands.CommandInvokeError('User cannot run this command.')
+
     @commands.command(hidden=True)
     async def debug(self, ctx):
         """Prints out diagnostic information regarding this bot's configuration."""
@@ -141,6 +156,29 @@ class Admin:
             await ctx.send(message_text)
         else:
             raise commands.CommandInvokeError('User cannot run this command.')
+
+    @commands.command(name='create_ex')
+    @commands.guild_only()
+    @commands.has_permissions(manage_channels=True)
+    async def create_exclusive_raid(self, ctx, gym_name: str, latitude: Decimal, longitude: Decimal,
+                                    expiration: UserRaidEndTime):
+        """Creates an EX raid that user can join via the RSVP commands.
+
+        Expiration time must follow the format MM/DD/YY 24H
+        """
+        raid = await ctx.raids.create_exclusive_raid(gym_name=gym_name, latitude=latitude, longitude=longitude,
+                                                     expiration=make_aware(expiration))
+
+        if ctx.bot.config.discord_ex_raid_channel is not None:
+            msg = await ctx.bot.config.discord_ex_raid_channel.send(embed=raid.embed)
+            rm = RaidMessage(raid=raid, channel=msg.channel.id, message=msg.id)
+            rm.save()
+            raid.messages.append(msg)
+
+        objects_to_save = await ctx.zones.send_to_raid_zones(raid)
+        RaidMessage.objects.bulk_create(objects_to_save)
+
+        await ctx.send(f'Created EX raid #{raid.display_id}')
 
 
 def setup(bot):

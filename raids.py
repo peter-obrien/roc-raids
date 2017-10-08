@@ -14,15 +14,32 @@ class RaidManager:
         self.hashed_active_raids = dict()
         self.raid_map = dict()
         self.raid_seed = 0
-        last_raid_seed = Raid.objects.filter(active=True).aggregate(Max('display_id')).get('display_id__max')
+        last_raid_seed = Raid.objects.filter(active=True, is_exclusive=False).aggregate(Max('display_id')).get('display_id__max')
         if last_raid_seed is not None:
             self.raid_seed = last_raid_seed
 
+        self.exclusive_hashed_raids = dict()
+        self.exclusive_raid_map = dict()
+        self.exclusive_raid_seed = 0
+        last_raid_seed = Raid.objects.filter(active=True, is_exclusive=True).aggregate(Max('display_id')).get('display_id__max')
+        if last_raid_seed is not None:
+            self.exclusive_raid_seed = last_raid_seed
+
     async def load_from_database(self, bot):
 
+        # Ensure the collections are empty before loading data from the database
+        self.hashed_active_raids = dict()
+        self.raid_map = dict()
+        self.exclusive_hashed_raids = dict()
+        self.exclusive_raid_map = dict()
+
         for raid in Raid.objects.filter(active=True):
-            self.hashed_active_raids[hash(raid)] = raid
-            self.raid_map[raid.display_id] = raid
+            if raid.is_exclusive:
+                self.exclusive_hashed_raids[hash(raid)] = raid
+                self.exclusive_raid_map[raid.display_id] = raid
+            else:
+                self.hashed_active_raids[hash(raid)] = raid
+                self.raid_map[raid.display_id] = raid
             raid.private_discord_channel = bot.get_channel(raid.private_channel)
 
             if raid.is_egg:
@@ -43,6 +60,24 @@ class RaidManager:
                         print(f'Could not find channel raid message {rm.id}')
                 except discord.errors.NotFound:
                     pass
+
+    async def create_exclusive_raid(self, gym_name, expiration, latitude, longitude):
+        self.exclusive_raid_seed += 1
+        data = dict()
+        data['url'] = f'http://maps.google.com/maps?q={latitude},{longitude}'
+        thumbnail = dict()
+        thumbnail['url'] = 'https://raw.githubusercontent.com/peter-obrien/organizer/ex_raids/resources/images/ex_raid_pass.png'
+        thumbnail['height'] = '128'
+        thumbnail['width'] = '128'
+        thumbnail['proxy_url'] = ''
+        data['thumbnail'] = thumbnail
+        raid = Raid(display_id=self.exclusive_raid_seed, gym_name=gym_name, raid_level=0, pokemon_number=0,
+                    latitude=latitude, longitude=longitude, expiration=expiration, is_exclusive=True, data=data)
+        self.exclusive_raid_map[raid.display_id] = raid
+        self.exclusive_hashed_raids[hash(raid)] = raid
+        raid.save()
+        raid.embed = await self.build_raid_embed(raid)
+        return raid
 
     def create_raid(self, pokemon_name, pokemon_number, raid_level, gym_name, expiration, latitude, longitude,
                     hatch_time):
@@ -67,21 +102,39 @@ class RaidManager:
         raid.messages = None
         raid.participants = None
         raid.private_discord_channel = None
-        self.hashed_active_raids.pop(hash(raid), None)
-        self.raid_map.pop(raid.display_id, None)
+        if raid.is_exclusive:
+            self.exclusive_hashed_raids.pop(hash(raid), None)
+            self.exclusive_raid_map.pop(raid.display_id, None)
+        else:
+            self.hashed_active_raids.pop(hash(raid), None)
+            self.raid_map.pop(raid.display_id, None)
 
     def get_raid(self, raid_id_str):
-        if not raid_id_str.isdigit():
-            raise commands.BadArgument(f'Raid #{raid_id_str} does not exist.')
+        if raid_id_str.lower().startswith('ex'):
+            ex_raid_id_str = raid_id_str[2:]
+            if not ex_raid_id_str.isdigit():
+                raise commands.BadArgument(f'EX Raid #{ex_raid_id_str} does not exist.')
 
-        raid_id_int = int(raid_id_str)
+            raid_id_int = int(ex_raid_id_str)
 
-        if raid_id_int not in self.raid_map:
-            if raid_id_int <= self.raid_seed:
-                raise commands.BadArgument(f'Raid #{raid_id_str} has expired.')
-            else:
+            if raid_id_int not in self.exclusive_raid_map:
+                if raid_id_int <= self.exclusive_raid_seed:
+                    raise commands.BadArgument(f'EX Raid #{raid_id_str} has expired.')
+                else:
+                    raise commands.BadArgument(f'Raid #{raid_id_str} does not exist.')
+            return self.exclusive_raid_map[raid_id_int]
+        else:
+            if not raid_id_str.isdigit():
                 raise commands.BadArgument(f'Raid #{raid_id_str} does not exist.')
-        return self.raid_map[raid_id_int]
+
+            raid_id_int = int(raid_id_str)
+
+            if raid_id_int not in self.raid_map:
+                if raid_id_int <= self.raid_seed:
+                    raise commands.BadArgument(f'Raid #{raid_id_str} has expired.')
+                else:
+                    raise commands.BadArgument(f'Raid #{raid_id_str} does not exist.')
+            return self.raid_map[raid_id_int]
 
     def add_participant(self, raid, user_id, user_name, party_size='1', notes=None):
         if not party_size.isdigit():
@@ -105,7 +158,9 @@ class RaidManager:
         else:
             party_descriptor = ''
 
-        if raid.pokemon_name is None:
+        if raid.is_exclusive:
+            pokemon_or_raid_level = 'EX'
+        elif raid.pokemon_name is None:
             pokemon_or_raid_level = f'a Level {raid.raid_level}'
         else:
             pokemon_or_raid_level = raid.pokemon_name
@@ -148,7 +203,12 @@ class RaidManager:
         else:
             desc = f'{raid.gym_name}\n\n**Ends:** *{localtime(raid.expiration).strftime(time_format)}*'
 
-        result = discord.Embed(title=f'{raid.pokemon_name}: Raid #{raid.display_id}', url=raid.data['url'],
+        if raid.is_exclusive:
+            title = f'EX Raid #{raid.display_id}'
+        else:
+            title = f'{raid.pokemon_name}: Raid #{raid.display_id}'
+
+        result = discord.Embed(title=title, url=raid.data['url'],
                                description=desc, colour=embed_color)
 
         if 'image' in raid.data:
@@ -202,6 +262,10 @@ class RaidZoneManager:
         return rz
 
     async def load_from_database(self, bot):
+
+        # Ensure the collections are empty before loading data from the database
+        self.zones = defaultdict(list)
+
         for rz in RaidZone.objects.all():
             channel = bot.get_channel(int(rz.destination))
             if channel is None:
