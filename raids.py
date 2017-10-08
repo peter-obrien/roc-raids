@@ -66,7 +66,7 @@ class RaidManager:
         data = dict()
         data['url'] = f'http://maps.google.com/maps?q={latitude},{longitude}'
         thumbnail = dict()
-        thumbnail['url'] = 'https://raw.githubusercontent.com/peter-obrien/organizer/ex_raids/resources/images/ex_raid_pass.png'
+        thumbnail['url'] = 'https://raw.githubusercontent.com/peter-obrien/organizer/develop/resources/images/ex_raid_pass.png'
         thumbnail['height'] = '128'
         thumbnail['width'] = '128'
         thumbnail['proxy_url'] = ''
