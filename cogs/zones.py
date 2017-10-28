@@ -435,6 +435,18 @@ Pokemon: `{ctx.rz.filters['pokemon']}`'''
         else:
             await ctx.send('Zone not deleted')
 
+    @commands.command(name="myzones")
+    async def my_zones(self, ctx):
+        """Lists your private raid zones"""
+        if ctx.author.id in ctx.zones.zones:
+            listed_zones = ctx.zones.zones[ctx.author.id]
+            msg = 'Here are your available raid zones:'
+            for index in range(0, len(listed_zones)):
+                msg += f'\n\t{index + 1}) {listed_zones[index].name}'
+            await ctx.author.send(msg)
+        else:
+            await ctx.author.send('You do not have any private zones setup.')
+        await ctx.message.delete()
 
 def setup(bot):
     bot.add_cog(Zones(bot))
