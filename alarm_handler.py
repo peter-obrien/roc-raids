@@ -139,3 +139,6 @@ async def process_raid(bot, message):
     objects_to_save = await bot.zones.send_to_raid_zones(raid)
 
     RaidMessage.objects.bulk_create(objects_to_save)
+
+    # Delete the source gymhuntr raid message
+    await message.delete()
