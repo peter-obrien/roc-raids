@@ -1,5 +1,6 @@
 from decimal import Decimal, InvalidOperation
 
+import discord
 from discord.ext import commands
 
 from cogs.utils.converters import ChannelOrMember
@@ -446,7 +447,11 @@ Pokemon: `{ctx.rz.filters['pokemon']}`'''
             await ctx.author.send(msg)
         else:
             await ctx.author.send('You do not have any private zones setup.')
-        await ctx.message.delete()
+
+    @my_zones.after_invoke
+    async def after_my_zones(self, ctx):
+        if isinstance(ctx.channel, discord.TextChannel):
+            await ctx.message.delete()
 
 def setup(bot):
     bot.add_cog(Zones(bot))
