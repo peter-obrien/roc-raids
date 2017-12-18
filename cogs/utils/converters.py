@@ -14,6 +14,6 @@ class ChannelOrMember(commands.Converter):
 class UserRaidEndTime(commands.Converter):
     async def convert(self, ctx, argument):
         try:
-            return datetime.strptime(argument, '%m/%d/%y %H')
+            return datetime.strptime(argument, '%m/%d/%y %H:%M')
         except ValueError:
-            raise commands.BadArgument(f'Unable to parse end time `{argument}` expected "MM/DD/YY 24H"')
+            raise commands.BadArgument(f'Unable to parse end time `{argument}` expected "mm/dd/yy 24H:MM"')
