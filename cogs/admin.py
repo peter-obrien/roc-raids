@@ -164,7 +164,7 @@ class Admin:
                                     expiration: UserRaidEndTime):
         """Creates an EX raid that user can join via the RSVP commands.
 
-        Expiration time must follow the format MM/DD/YY 24H
+        Expiration time must follow the format:  mm/dd/yy 24H:MM
         """
         raid = await ctx.raids.create_exclusive_raid(gym_name=gym_name, latitude=latitude, longitude=longitude,
                                                      expiration=make_aware(expiration))
