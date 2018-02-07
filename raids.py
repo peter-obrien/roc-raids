@@ -266,7 +266,7 @@ class RaidZoneManager:
         # Ensure the collections are empty before loading data from the database
         self.zones = defaultdict(list)
 
-        for rz in RaidZone.objects.all():
+        for rz in RaidZone.objects.all().order_by('name'):
             channel = bot.get_channel(int(rz.destination))
             if channel is None:
                 channel = bot.get_guild(rz.guild).get_member(int(rz.destination))
