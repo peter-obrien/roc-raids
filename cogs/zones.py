@@ -324,7 +324,7 @@ Pokemon: `{ctx.rz.filters['pokemon']}`'''
                 rz.filters['raid_levels'].clear()
                 rz.filters['raid_levels'] = new_filter
                 rz.save()
-                await ctx.send(f"Updated raid level filter list: `{ctx.rz.filters['raid_levels']}`")
+                await ctx.send(f"Updated raid level filter list: `{rz.filters['raid_levels']}`")
             else:
                 await ctx.send('Setup has not been run for this channel.')
         except ValueError:
