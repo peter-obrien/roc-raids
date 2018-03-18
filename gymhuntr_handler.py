@@ -99,7 +99,7 @@ async def process_raid(bot, message):
         raid.messages.append(raid_message)
 
         # Send the raids to any compatible raid zones.
-        zone_messages = await bot.zones.send_to_raid_zones(raid)
+        zone_messages = await bot.zones.send_to_raid_zones(raid, bot)
         objects_to_save.extend(zone_messages)
 
         RaidMessage.objects.bulk_create(objects_to_save)
