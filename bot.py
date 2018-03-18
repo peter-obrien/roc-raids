@@ -193,20 +193,17 @@ class RaidCoordinator(commands.AutoShardedBot):
         if user.bot:
             return
 
-        # If the message is a raid card, rvsp for that user otherwise ignore the reaction.
-        if reaction.message.id in self.raids.message_to_raid:
-            raid = self.raids.message_to_raid[reaction.message.id]
-            await Rsvp.add_user_to_raid(raid, self, reaction.message.channel, user)
-
-    async def on_reaction_remove(self, reaction, user):
-
-            if user.bot:
-                return
-
-            # If the message is a raid card, remove the user from the raid otherwise ignore the reaction
+        if reaction.emoji == '❌':
+            if reaction.message.id in self.raids.private_channel_raids:
+                raid = self.raids.private_channel_raids[reaction.message.id]
+                await Rsvp.remove_user_from_raid(raid, self, reaction.message.channel, user)
+                await reaction.message.remove_reaction(reaction.emoji, user)
+        elif reaction.emoji == '✅':
+            # If the message is a raid card, rvsp for that user otherwise ignore the reaction.
             if reaction.message.id in self.raids.message_to_raid:
                 raid = self.raids.message_to_raid[reaction.message.id]
-                await Rsvp.remove_user_from_raid(raid, self, reaction.message.channel, user)
+                await Rsvp.add_user_to_raid(raid, self, reaction.message.channel, user)
+                await reaction.message.remove_reaction(reaction.emoji, user)
 
     async def on_guild_channel_delete(self, channel):
         # If the channel was a raid zone, delete it.
@@ -247,6 +244,8 @@ class RaidCoordinator(commands.AutoShardedBot):
                     try:
                         if message.id in self.raids.message_to_raid:
                             del self.raids.message_to_raid[message.id]
+                        elif message.id in self.raids.private_channel_raids:
+                            del self.raids.private_channel_raids[message.id]
                         await message.delete()
                     except discord.errors.NotFound:
                         pass

@@ -54,6 +54,10 @@ class Rsvp:
 
             # Send the raid card to the top of the channel.
             private_raid_card = await raid.private_discord_channel.send(embed=raid.embed)
+            # Add reaction to allow for easy leaving the raid.
+            if not bot.raids.logging_out:
+                await private_raid_card.add_reaction('❌')
+                bot.raids.private_channel_raids[private_raid_card.id] = raid
             raid.messages.append(private_raid_card)
 
             with transaction.atomic():

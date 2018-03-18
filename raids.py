@@ -22,9 +22,11 @@ class RaidManager:
         self.exclusive_hashed_raids = dict()
         self.exclusive_raid_map = dict()
         self.exclusive_raid_seed = 0
-        # This dictionary does not need to be repopulated since discord.py cannot monitor reactions on messages prior to
-        # the bot coming online.
+        # These two dictionaries does not need to be repopulated since discord.py cannot monitor reactions on messages
+        # prior to the bot coming online.
         self.message_to_raid = dict()
+        self.private_channel_raids = dict()
+
         last_raid_seed = Raid.objects.filter(active=True, is_exclusive=True).aggregate(Max('display_id')).get('display_id__max')
         if last_raid_seed is not None:
             self.exclusive_raid_seed = last_raid_seed
@@ -110,7 +112,7 @@ class RaidManager:
         if raid.is_exclusive:
             self.exclusive_hashed_raids.pop(hash(raid), None)
             self.exclusive_raid_map.pop(raid.display_id, None)
-        else:
+        elif not self.logging_out:
             self.hashed_active_raids.pop(hash(raid), None)
             self.raid_map.pop(raid.display_id, None)
 
