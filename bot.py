@@ -14,7 +14,8 @@ import alarm_handler
 import gymhuntr_handler
 
 from discord.ext import commands
-from orm.models import BotOnlyChannel, Raid, GuildConfig, RaidMessage
+from orm.models import BotOnlyChannel, Raid, GuildConfig
+from cogs.rsvp import Rsvp
 from cogs.utils import context
 from raids import RaidManager, RaidZoneManager
 from datetime import timedelta
@@ -195,48 +196,8 @@ class RaidCoordinator(commands.AutoShardedBot):
         # If the message is a raid card, rvsp for that user otherwise ignore the reaction.
         # if reaction.message in
         if reaction.message.id in self.raids.message_to_raid:
-
             raid = self.raids.message_to_raid[reaction.message.id]
-
-            private_raid_channel = raid.private_discord_channel
-            if private_raid_channel is None:
-                overwrites = {
-                    self.bot_guild.default_role: self.private_channel_no_access,
-                    self.bot_guild.me: self.private_channel_access
-                }
-                if raid.is_exclusive:
-                    private_raid_channel = await self.bot_guild.create_text_channel(f'ex-raid-{raid.display_id}-chat',
-                                                                                   overwrites=overwrites)
-                else:
-                    private_raid_channel = await self.bot_guild.create_text_channel(f'raid-{raid.display_id}-chat',
-                                                                                   overwrites=overwrites)
-                if self.config.discord_raid_category is not None:
-                    await private_raid_channel.edit(category=self.config.discord_raid_category)
-
-                raid.private_discord_channel = private_raid_channel
-
-                # Send the raid card to the top of the channel.
-                private_raid_card = await raid.private_discord_channel.send(embed=raid.embed)
-                raid.messages.append(private_raid_card)
-
-                with transaction.atomic():
-                    raid.private_channel = private_raid_channel.id
-                    raid.save()
-                    RaidMessage(raid=raid, channel=private_raid_channel.id, message=private_raid_card.id).save()
-
-            # Add this user to the raid and update all the embeds for the raid.
-            result_tuple = self.raids.add_participant(raid, user.id, user.display_name)
-            for msg in raid.messages:
-                try:
-                    await msg.edit(embed=raid.embed)
-                except discord.errors.NotFound:
-                    raid.messages.remove(msg)
-                    pass
-
-            # Add the user to the private channel for the raid
-            await raid.private_discord_channel.set_permissions(user, overwrite=self.private_channel_access)
-            await raid.private_discord_channel.send(f'{user.mention}{result_tuple[0].details()}')
-
+            await Rsvp.add_user_to_raid(raid, self, reaction.message.channel, user)
 
     async def on_guild_channel_delete(self, channel):
         # If the channel was a raid zone, delete it.
