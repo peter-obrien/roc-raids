@@ -11,6 +11,7 @@ embed_color = 0x408fd0
 
 class RaidManager:
     def __init__(self):
+        self.logging_out = False
         self.hashed_active_raids = dict()
         self.raid_map = dict()
         self.raid_seed = 0
@@ -95,8 +96,9 @@ class RaidManager:
     def track_raid(self, raid):
         self.raid_seed += 1
         raid.display_id = self.raid_seed
-        self.hashed_active_raids[hash(raid)] = raid
-        self.raid_map[raid.display_id] = raid
+        if not self.logging_out:
+            self.hashed_active_raids[hash(raid)] = raid
+            self.raid_map[raid.display_id] = raid
         raid.save()
         return raid
 
