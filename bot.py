@@ -194,10 +194,19 @@ class RaidCoordinator(commands.AutoShardedBot):
             return
 
         # If the message is a raid card, rvsp for that user otherwise ignore the reaction.
-        # if reaction.message in
         if reaction.message.id in self.raids.message_to_raid:
             raid = self.raids.message_to_raid[reaction.message.id]
             await Rsvp.add_user_to_raid(raid, self, reaction.message.channel, user)
+
+    async def on_reaction_remove(self, reaction, user):
+
+            if user.bot:
+                return
+
+            # If the message is a raid card, remove the user from the raid otherwise ignore the reaction
+            if reaction.message.id in self.raids.message_to_raid:
+                raid = self.raids.message_to_raid[reaction.message.id]
+                await Rsvp.remove_user_from_raid(raid, self, reaction.message.channel, user)
 
     async def on_guild_channel_delete(self, channel):
         # If the channel was a raid zone, delete it.
