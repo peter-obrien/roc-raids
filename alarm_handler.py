@@ -122,6 +122,11 @@ async def process_raid(bot, message):
             # If transitioning from a raid egg to a raid pokemon, delete all the previous egg messages.
             for m in raid.messages:
                 try:
+                    if not bot.raids.logging_out:
+                        if m.id in bot.raids.message_to_raid:
+                            del bot.raids.message_to_raid[m.id]
+                        elif m.id in bot.raids.private_channel_raids:
+                            del bot.raids.private_channel_raids[m.id]
                     await m.delete()
                 except discord.NotFound:
                     pass
@@ -133,6 +138,10 @@ async def process_raid(bot, message):
             # Send the new embed to the private channel
             if raid.private_channel is not None:
                 private_raid_card = await raid.private_discord_channel.send(embed=raid.embed)
+                # Add reaction to allow for easy leaving the raid.
+                if not bot.raids.logging_out:
+                    await private_raid_card.add_reaction('❌')
+                    bot.raids.private_channel_raids[private_raid_card.id] = raid
                 raid.messages.append(private_raid_card)
 
     # Send the raids to any compatible raid zones.

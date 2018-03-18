@@ -242,10 +242,11 @@ class RaidCoordinator(commands.AutoShardedBot):
             for raid in expired_raids:
                 for message in raid.messages:
                     try:
-                        if message.id in self.raids.message_to_raid:
-                            del self.raids.message_to_raid[message.id]
-                        elif message.id in self.raids.private_channel_raids:
-                            del self.raids.private_channel_raids[message.id]
+                        if not self.raids.logging_out:
+                            if message.id in self.raids.message_to_raid:
+                                del self.raids.message_to_raid[message.id]
+                            elif message.id in self.raids.private_channel_raids:
+                                del self.raids.private_channel_raids[message.id]
                         await message.delete()
                     except discord.errors.NotFound:
                         pass
