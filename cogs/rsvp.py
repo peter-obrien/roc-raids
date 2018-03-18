@@ -88,17 +88,22 @@ class Rsvp:
             author = ctx.bot_guild.get_member(author.id)
 
         raid = ctx.raids.get_raid(raid_id)
-        display_msg = ctx.raids.remove_participant(raid, author.id, author.display_name)
+
+        await self.remove_user_from_raid(raid, self.bot, ctx.channel, author)
+
+    @staticmethod
+    async def remove_user_from_raid(raid, bot, origin_channel, user):
+        display_msg = bot.raids.remove_participant(raid, user.id, user.display_name)
 
         if display_msg is not None:
             # Remove the user to the private channel for the raid
-            await raid.private_discord_channel.set_permissions(author, overwrite=None)
-            await raid.private_discord_channel.send(f'**{author.display_name}** is no longer attending')
+            await raid.private_discord_channel.set_permissions(user, overwrite=None)
+            await raid.private_discord_channel.send(f'**{user.display_name}** is no longer attending')
 
             for msg in raid.messages:
                 await msg.edit(embed=raid.embed)
-            if ctx.rsvp_channel is not None and isinstance(ctx.channel, discord.abc.GuildChannel):
-                await ctx.rsvp_channel.send(display_msg)
+            if bot.rsvp_channel is not None and isinstance(origin_channel, discord.abc.GuildChannel):
+                await bot.rsvp_channel.send(display_msg)
 
     @commands.command()
     async def who(self, ctx, raid_id: str):
