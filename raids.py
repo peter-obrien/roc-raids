@@ -294,7 +294,8 @@ class RaidZoneManager:
                             raid.messages.append(raid_message)
                             bot.raids.message_to_raid[raid_message.id] = raid
                             # Add a reaction to the raid messages so it's easier to others to react
-                            await raid_message.add_reaction('✅')
+                            if not bot.raids.logging_out:
+                                await raid_message.add_reaction('✅')
                     except discord.errors.Forbidden:
                         print(
                             f'Unable to send raid to channel {rz.discord_destination.name}. The bot does not have permission.')
