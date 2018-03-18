@@ -11,6 +11,7 @@ embed_color = 0x408fd0
 
 class RaidManager:
     def __init__(self):
+        self.logging_out = False
         self.hashed_active_raids = dict()
         self.raid_map = dict()
         self.raid_seed = 0
@@ -21,6 +22,11 @@ class RaidManager:
         self.exclusive_hashed_raids = dict()
         self.exclusive_raid_map = dict()
         self.exclusive_raid_seed = 0
+        # These two dictionaries does not need to be repopulated since discord.py cannot monitor reactions on messages
+        # prior to the bot coming online.
+        self.message_to_raid = dict()
+        self.private_channel_raids = dict()
+
         last_raid_seed = Raid.objects.filter(active=True, is_exclusive=True).aggregate(Max('display_id')).get('display_id__max')
         if last_raid_seed is not None:
             self.exclusive_raid_seed = last_raid_seed
@@ -92,8 +98,9 @@ class RaidManager:
     def track_raid(self, raid):
         self.raid_seed += 1
         raid.display_id = self.raid_seed
-        self.hashed_active_raids[hash(raid)] = raid
-        self.raid_map[raid.display_id] = raid
+        if not self.logging_out:
+            self.hashed_active_raids[hash(raid)] = raid
+            self.raid_map[raid.display_id] = raid
         raid.save()
         return raid
 
@@ -105,7 +112,7 @@ class RaidManager:
         if raid.is_exclusive:
             self.exclusive_hashed_raids.pop(hash(raid), None)
             self.exclusive_raid_map.pop(raid.display_id, None)
-        else:
+        elif not self.logging_out:
             self.hashed_active_raids.pop(hash(raid), None)
             self.raid_map.pop(raid.display_id, None)
 
@@ -276,7 +283,7 @@ class RaidZoneManager:
             else:
                 print(f'Unable to load raid zone for id rz.id destination {rz.destination}')
 
-    async def send_to_raid_zones(self, raid):
+    async def send_to_raid_zones(self, raid, bot):
         objects_to_save = []
         for zone_list in self.zones.values():
             for rz in zone_list:
@@ -287,6 +294,10 @@ class RaidZoneManager:
                             objects_to_save.append(
                                 RaidMessage(raid=raid, channel=raid_message.channel.id, message=raid_message.id))
                             raid.messages.append(raid_message)
+                            bot.raids.message_to_raid[raid_message.id] = raid
+                            # Add a reaction to the raid messages so it's easier to others to react
+                            if not bot.raids.logging_out:
+                                await raid_message.add_reaction('✅')
                     except discord.errors.Forbidden:
                         print(
                             f'Unable to send raid to channel {rz.discord_destination.name}. The bot does not have permission.')

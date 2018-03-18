@@ -15,6 +15,7 @@ import gymhuntr_handler
 
 from discord.ext import commands
 from orm.models import BotOnlyChannel, Raid, GuildConfig
+from cogs.rsvp import Rsvp
 from cogs.utils import context
 from raids import RaidManager, RaidZoneManager
 from datetime import timedelta
@@ -91,6 +92,8 @@ class RaidCoordinator(commands.AutoShardedBot):
         self.rsvp_channel = None
         self.bot_only_channels = []
         self.reset_date = timezone.localdate(timezone.now()) + timedelta(hours=24)
+        self.private_channel_no_access = discord.PermissionOverwrite(read_messages=False)
+        self.private_channel_access = discord.PermissionOverwrite(read_messages=True, mention_everyone=True)
 
         config_results = GuildConfig.objects.filter(guild=guild_id)
         if len(config_results) == 0:
@@ -185,6 +188,23 @@ class RaidCoordinator(commands.AutoShardedBot):
 
             await self.process_commands(message)
 
+    async def on_reaction_add(self, reaction, user):
+
+        if user.bot:
+            return
+
+        if reaction.emoji == '❌':
+            if reaction.message.id in self.raids.private_channel_raids:
+                raid = self.raids.private_channel_raids[reaction.message.id]
+                await Rsvp.remove_user_from_raid(raid, self, reaction.message.channel, user)
+                await reaction.message.remove_reaction(reaction.emoji, user)
+        elif reaction.emoji == '✅':
+            # If the message is a raid card, rvsp for that user otherwise ignore the reaction.
+            if reaction.message.id in self.raids.message_to_raid:
+                raid = self.raids.message_to_raid[reaction.message.id]
+                await Rsvp.add_user_to_raid(raid, self, reaction.message.channel, user)
+                await reaction.message.remove_reaction(reaction.emoji, user)
+
     async def on_guild_channel_delete(self, channel):
         # If the channel was a raid zone, delete it.
         if channel.id in self.zones.zones:
@@ -222,6 +242,10 @@ class RaidCoordinator(commands.AutoShardedBot):
             for raid in expired_raids:
                 for message in raid.messages:
                     try:
+                        if message.id in self.raids.message_to_raid:
+                            del self.raids.message_to_raid[message.id]
+                        elif message.id in self.raids.private_channel_raids:
+                            del self.raids.private_channel_raids[message.id]
                         await message.delete()
                     except discord.errors.NotFound:
                         pass
