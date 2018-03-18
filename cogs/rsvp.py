@@ -10,8 +10,6 @@ class Rsvp:
 
     def __init__(self, bot):
         self.bot = bot
-        self.private_channel_no_access = discord.PermissionOverwrite(read_messages=False)
-        self.private_channel_access = discord.PermissionOverwrite(read_messages=True, mention_everyone=True)
 
     async def __after_invoke(self, ctx):
         if isinstance(ctx.channel, discord.TextChannel):
@@ -36,8 +34,8 @@ class Rsvp:
         private_raid_channel = raid.private_discord_channel
         if private_raid_channel is None:
             overwrites = {
-                ctx.bot_guild.default_role: self.private_channel_no_access,
-                ctx.bot_guild.me: self.private_channel_access
+                ctx.bot_guild.default_role: self.bot.private_channel_no_access,
+                ctx.bot_guild.me: self.bot.private_channel_access
             }
             if raid.is_exclusive:
                 private_raid_channel = await ctx.bot_guild.create_text_channel(f'ex-raid-{raid.display_id}-chat',
@@ -69,7 +67,7 @@ class Rsvp:
                 pass
 
         # Add the user to the private channel for the raid
-        await raid.private_discord_channel.set_permissions(author, overwrite=self.private_channel_access)
+        await raid.private_discord_channel.set_permissions(author, overwrite=self.bot.private_channel_access)
         await raid.private_discord_channel.send(f'{author.mention}{result_tuple[0].details()}')
 
         # Send message to the RSVP channel if the command was invoked publicly
