@@ -57,6 +57,10 @@ class Rsvp:
             # Add reaction to allow for easy leaving the raid.
             if not bot.raids.logging_out:
                 await private_raid_card.add_reaction('❌')
+                await private_raid_card.add_reaction('1⃣')
+                await private_raid_card.add_reaction('2⃣')
+                await private_raid_card.add_reaction('3⃣')
+                await private_raid_card.add_reaction('4⃣')
                 bot.raids.private_channel_raids[private_raid_card.id] = raid
             raid.messages.append(private_raid_card)
 
