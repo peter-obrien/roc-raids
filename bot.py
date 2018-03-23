@@ -193,15 +193,28 @@ class RaidCoordinator(commands.AutoShardedBot):
         if user.bot:
             return
 
-        if reaction.emoji == '❌':
-            if reaction.message.id in self.raids.private_channel_raids:
-                raid = self.raids.private_channel_raids[reaction.message.id]
+        # Reactions to the raid card in the private lobby
+        if reaction.message.id in self.raids.private_channel_raids:
+            raid = self.raids.private_channel_raids[reaction.message.id]
+            if reaction.emoji == '❌':
                 await Rsvp.remove_user_from_raid(raid, self, reaction.message.channel, user)
                 await reaction.message.remove_reaction(reaction.emoji, user)
-        elif reaction.emoji == '✅':
-            # If the message is a raid card, rvsp for that user otherwise ignore the reaction.
-            if reaction.message.id in self.raids.message_to_raid:
-                raid = self.raids.message_to_raid[reaction.message.id]
+            elif reaction.emoji == '1⃣':
+                await Rsvp.add_user_to_raid(raid, self, reaction.message.channel, user, '1')
+                await reaction.message.remove_reaction(reaction.emoji, user)
+            elif reaction.emoji == '2⃣':
+                await Rsvp.add_user_to_raid(raid, self, reaction.message.channel, user, '2')
+                await reaction.message.remove_reaction(reaction.emoji, user)
+            elif reaction.emoji == '3⃣':
+                await Rsvp.add_user_to_raid(raid, self, reaction.message.channel, user, '3')
+                await reaction.message.remove_reaction(reaction.emoji, user)
+            elif reaction.emoji == '4⃣':
+                await Rsvp.add_user_to_raid(raid, self, reaction.message.channel, user, '4')
+                await reaction.message.remove_reaction(reaction.emoji, user)
+        # Reactions to the public raid cards
+        elif reaction.message.id in self.raids.message_to_raid:
+            raid = self.raids.message_to_raid[reaction.message.id]
+            if reaction.emoji == '✅':
                 await Rsvp.add_user_to_raid(raid, self, reaction.message.channel, user)
                 await reaction.message.remove_reaction(reaction.emoji, user)
 
