@@ -4,7 +4,7 @@ import discord
 from discord.ext import commands
 from django.utils.timezone import activate, make_aware
 
-from cogs.utils.converters import UserRaidEndTime
+from cogs.utils.converters import UserRaidEndTimeAndDate
 from orm.models import BotOnlyChannel, RaidMessage
 
 
@@ -167,7 +167,7 @@ class Admin:
     @commands.guild_only()
     @commands.has_permissions(manage_channels=True)
     async def create_exclusive_raid(self, ctx, gym_name: str, latitude: Decimal, longitude: Decimal,
-                                    expiration: UserRaidEndTime):
+                                    expiration: UserRaidEndTimeAndDate):
         """Creates an EX raid that user can join via the RSVP commands.
 
         Expiration time must follow the format:  mm/dd/yy 24H:MM
