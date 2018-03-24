@@ -181,7 +181,7 @@ class Admin:
             rm.save()
             raid.messages.append(msg)
 
-        objects_to_save = await ctx.zones.send_to_raid_zones(raid)
+        objects_to_save = await ctx.zones.send_to_raid_zones(raid, ctx.bot)
         RaidMessage.objects.bulk_create(objects_to_save)
 
         await ctx.send(f'Created EX raid #{raid.display_id}')
