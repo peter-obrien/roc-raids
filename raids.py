@@ -1,4 +1,6 @@
 from collections import defaultdict
+from datetime import timedelta
+
 from discord.ext import commands
 from orm.models import Raid, RaidParticipant, RaidMessage, RaidZone
 import discord
@@ -83,6 +85,25 @@ class RaidManager:
         self.exclusive_hashed_raids[hash(raid)] = raid
         raid.save()
         raid.embed = await self.build_raid_embed(raid)
+        return raid
+
+    async def create_manual_raid(self, is_egg, gym_name, expiration, latitude, longitude, raid_level=0,
+                                 pokemon_name=None):
+
+        data = dict()
+        data['url'] = f'http://maps.google.com/maps?q={latitude},{longitude}'
+
+        hatch_time = None
+        expiration_time = expiration
+        if is_egg:
+            hatch_time = expiration
+            expiration_time = hatch_time + timedelta(minutes=45)
+
+        raid = Raid(gym_name=gym_name, is_egg=is_egg, raid_level=raid_level, pokemon_number=0,
+                    pokemon_name=pokemon_name, latitude=latitude, longitude=longitude,
+                    hatch_time=hatch_time, expiration=expiration_time,
+                    is_exclusive=False, data=data)
+
         return raid
 
     def create_raid(self, pokemon_name, pokemon_number, raid_level, gym_name, expiration, latitude, longitude,
@@ -204,7 +225,8 @@ class RaidManager:
             result += '\n\t' + str(raider)
         return result
 
-    async def build_raid_embed(self, raid):
+    @staticmethod
+    async def build_raid_embed(raid):
         if 'quick_move' in raid.data:
             desc = f"{raid.gym_name}\n\n**Moves:** {raid.data['quick_move']}/{raid.data['charge_move']}\n**Ends:** *{localtime(raid.expiration).strftime(time_format)}*"
         else:
@@ -232,7 +254,8 @@ class RaidManager:
 
         return result
 
-    async def build_egg_embed(self, raid):
+    @staticmethod
+    async def build_egg_embed(raid):
         desc = f'{raid.gym_name}\n\n**Hatches:** *{localtime(raid.hatch_time).strftime(time_format)}*'
 
         result = discord.Embed(title=f'Level {raid.raid_level} egg: Raid #{raid.display_id}', url=raid.data['url'],
@@ -249,6 +272,24 @@ class RaidManager:
             result.thumbnail.height = raid.data['thumbnail']['height']
             result.thumbnail.width = raid.data['thumbnail']['width']
             result.thumbnail.proxy_url = raid.data['thumbnail']['proxy_url']
+
+        return result
+
+    @staticmethod
+    def build_manual_raid_embed(raid):
+        if raid.is_egg:
+            desc = f'{raid.gym_name}\n\n**Hatches:** *{localtime(raid.hatch_time).strftime(time_format)}*\n**Approx End:** *{localtime(raid.expiration).strftime(time_format)}*'
+        else:
+            desc = f'{raid.gym_name}\n\n**Ends:** *{localtime(raid.expiration).strftime(time_format)}*'
+
+        details = ''
+        if raid.pokemon_name is not None:
+            details = f'{raid.pokemon_name}: '
+        elif raid.raid_level > 0:
+            details = f'Level {raid.raid_level}: '
+
+        result = discord.Embed(title=f'{details}User Raid #{raid.display_id}', url=raid.data['url'],
+                               description=desc, colour=embed_color)
 
         return result
 

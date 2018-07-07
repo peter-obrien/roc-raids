@@ -1,6 +1,10 @@
+from datetime import timedelta
+
 import discord
+from decimal import Decimal
 from discord.ext import commands
 from django.db import transaction
+from django.utils import timezone
 
 from orm.models import RaidMessage
 
@@ -34,7 +38,7 @@ class Rsvp:
         await self.add_user_to_raid(raid, self.bot, ctx.channel, author, party_size, notes)
 
     @staticmethod
-    async def add_user_to_raid(raid, bot, origin_channel, user, party_size: str='1', notes: str = None):
+    async def add_user_to_raid(raid, bot, origin_channel, user, party_size: str = '1', notes: str = None):
         private_raid_channel = raid.private_discord_channel
         if private_raid_channel is None:
             overwrites = {
@@ -126,6 +130,56 @@ class Rsvp:
         raid = ctx.raids.get_raid(raid_id)
         await ctx.author.send(embed=raid.embed)
 
+    @commands.command(aliases=['reportegg'])
+    @commands.has_role('Raid Reporter')
+    async def report_egg(self, ctx, gym_name: str, level: int, latitude: Decimal, longitude: Decimal,
+                         minutes_remaining: int):
+        """Creates an raid that user can join via the RSVP commands.
+
+        If a gym name is multiple words wrap the gym name with single quotes.
+        """
+
+        hatch_time = timezone.localtime(timezone.now()) + timedelta(minutes=minutes_remaining)
+
+        raid = await ctx.raids.create_manual_raid(gym_name=gym_name, raid_level=level,
+                                                  latitude=latitude, longitude=longitude,
+                                                  expiration=hatch_time,
+                                                  is_egg=True)
+
+        await self.finish_reporting_manual_raid(ctx, raid)
+
+    @commands.command(aliases=['reportraid'])
+    @commands.has_role('Raid Reporter')
+    async def report_raid(self, ctx, gym_name: str, level: int, pokemon_name: str, latitude: Decimal,
+                          longitude: Decimal,
+                          minutes_remaining: int):
+        """Creates an raid that user can join via the RSVP commands.
+
+        If a gym name is multiple words wrap the gym name with single quotes.
+        """
+
+        expiration = timezone.localtime(timezone.now()) + timedelta(minutes=minutes_remaining)
+
+        raid = await ctx.raids.create_manual_raid(gym_name=gym_name, raid_level=level, pokemon_name=pokemon_name,
+                                                  latitude=latitude, longitude=longitude,
+                                                  expiration=expiration, is_egg=False)
+
+        await self.finish_reporting_manual_raid(ctx, raid)
+
+    # Handles duplicate management as well as communicating the raid to the appropriate channels.
+    async def finish_reporting_manual_raid(self, ctx, raid):
+        hash_val = hash(raid)
+        if hash_val in ctx.raids.hashed_active_raids:
+            raid = ctx.raids.hashed_active_raids[hash_val]
+            await ctx.author.send(f"This raid was already reported. It's number is {raid.display_id}")
+        else:
+            ctx.raids.track_raid(raid)
+            raid.embed = ctx.raids.build_manual_raid_embed(raid)
+
+            objects_to_save = await ctx.zones.send_to_raid_zones(raid, ctx.bot)
+            RaidMessage.objects.bulk_create(objects_to_save)
+
+            await ctx.send(f'Created raid #{raid.display_id}')
 
 def setup(bot):
     bot.add_cog(Rsvp(bot))
