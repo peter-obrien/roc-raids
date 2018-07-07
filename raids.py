@@ -230,7 +230,12 @@ class RaidManager:
         if 'quick_move' in raid.data:
             desc = f"{raid.gym_name}\n\n**Moves:** {raid.data['quick_move']}/{raid.data['charge_move']}\n**Ends:** *{localtime(raid.expiration).strftime(time_format)}*"
         else:
-            desc = f'{raid.gym_name}\n\n**Ends:** *{localtime(raid.expiration).strftime(time_format)}*'
+            if raid.is_exclusive:
+                # Current trend is a duration of 45 minutes for an EX raid.
+                start_time = localtime(raid.expiration) - timedelta(minutes=45)
+                desc = f'{raid.gym_name}\n\n**Starts:** *{start_time.strftime(time_format)}*\n**Ends:** *{localtime(raid.expiration).strftime(time_format)}*'
+            else:
+                desc = f'{raid.gym_name}\n\n**Ends:** *{localtime(raid.expiration).strftime(time_format)}*'
 
         if raid.is_exclusive:
             title = f'EX Raid #{raid.display_id}'
