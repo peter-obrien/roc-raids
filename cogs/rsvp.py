@@ -146,10 +146,7 @@ class Rsvp:
                                                   expiration=hatch_time,
                                                   is_egg=True)
 
-        objects_to_save = await ctx.zones.send_to_raid_zones(raid, ctx.bot)
-        RaidMessage.objects.bulk_create(objects_to_save)
-
-        await ctx.send(f'Created raid #{raid.display_id}')
+        await self.finish_reporting_manual_raid(ctx, raid)
 
     @commands.command(aliases=['reportraid'])
     @commands.has_role('Raid Reporter')
@@ -167,11 +164,22 @@ class Rsvp:
                                                   latitude=latitude, longitude=longitude,
                                                   expiration=expiration, is_egg=False)
 
-        objects_to_save = await ctx.zones.send_to_raid_zones(raid, ctx.bot)
-        RaidMessage.objects.bulk_create(objects_to_save)
+        await self.finish_reporting_manual_raid(ctx, raid)
 
-        await ctx.send(f'Created raid #{raid.display_id}')
+    # Handles duplicate management as well as communicating the raid to the appropriate channels.
+    async def finish_reporting_manual_raid(self, ctx, raid):
+        hash_val = hash(raid)
+        if hash_val in ctx.raids.hashed_active_raids:
+            raid = ctx.raids.hashed_active_raids[hash_val]
+            await ctx.author.send(f"This raid was already reported. It's number is {raid.display_id}")
+        else:
+            ctx.raids.track_raid(raid)
+            raid.embed = ctx.raids.build_manual_raid_embed(raid)
 
+            objects_to_save = await ctx.zones.send_to_raid_zones(raid, ctx.bot)
+            RaidMessage.objects.bulk_create(objects_to_save)
+
+            await ctx.send(f'Created raid #{raid.display_id}')
 
 def setup(bot):
     bot.add_cog(Rsvp(bot))

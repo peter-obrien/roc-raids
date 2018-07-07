@@ -103,8 +103,6 @@ class RaidManager:
                     pokemon_name=pokemon_name, latitude=latitude, longitude=longitude,
                     hatch_time=hatch_time, expiration=expiration_time,
                     is_exclusive=False, data=data)
-        self.track_raid(raid)
-        raid.embed = self.build_manual_raid_embed(raid)
 
         return raid
 
