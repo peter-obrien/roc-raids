@@ -141,7 +141,7 @@ class Rsvp:
 
         hatch_time = timezone.localtime(timezone.now()) + timedelta(minutes=minutes_remaining)
 
-        raid = await ctx.raids.create_manual_raid(gym_name=gym_name, raid_level=level,
+        raid = await ctx.raids.create_manual_raid(ctx.author.id, gym_name=gym_name, raid_level=level,
                                                   latitude=latitude, longitude=longitude,
                                                   expiration=hatch_time,
                                                   is_egg=True)
@@ -160,7 +160,8 @@ class Rsvp:
 
         expiration = timezone.localtime(timezone.now()) + timedelta(minutes=minutes_remaining)
 
-        raid = await ctx.raids.create_manual_raid(gym_name=gym_name, raid_level=level, pokemon_name=pokemon_name,
+        raid = await ctx.raids.create_manual_raid(ctx.author.id,  gym_name=gym_name,
+                                                  raid_level=level, pokemon_name=pokemon_name,
                                                   latitude=latitude, longitude=longitude,
                                                   expiration=expiration, is_egg=False)
 

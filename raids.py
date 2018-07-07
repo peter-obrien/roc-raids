@@ -87,8 +87,8 @@ class RaidManager:
         raid.embed = await self.build_raid_embed(raid)
         return raid
 
-    async def create_manual_raid(self, is_egg, gym_name, expiration, latitude, longitude, raid_level=0,
-                                 pokemon_name=None):
+    async def create_manual_raid(self, user_id, is_egg, gym_name, expiration, latitude, longitude, raid_level=0,
+                                 pokemon_name=None,):
 
         data = dict()
         data['url'] = f'http://maps.google.com/maps?q={latitude},{longitude}'
@@ -102,7 +102,7 @@ class RaidManager:
         raid = Raid(gym_name=gym_name, is_egg=is_egg, raid_level=raid_level, pokemon_number=0,
                     pokemon_name=pokemon_name, latitude=latitude, longitude=longitude,
                     hatch_time=hatch_time, expiration=expiration_time,
-                    is_exclusive=False, data=data)
+                    is_exclusive=False, data=data, reporting_user=user_id)
 
         return raid
 
