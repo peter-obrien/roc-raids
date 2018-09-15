@@ -32,7 +32,12 @@ class Zones:
         else:
             msg = 'Here are the available raid zones:'
             for index in range(0, len(listed_zones)):
-                msg += f'\n\t{index + 1}) {listed_zones[index].name}'
+                nextZone = f'\n\t{index + 1}) {listed_zones[index].name}'
+                if len(msg) + len(nextZone) > 2000:
+                    await ctx.send(msg)
+                    msg = 'Here are the available raid zones:' + nextZone
+                else:
+                    msg += nextZone
             await ctx.send(msg)
 
     @commands.group(pass_context=True)
