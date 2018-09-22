@@ -136,7 +136,7 @@ class Rsvp:
                          minutes_remaining: int):
         """Creates an raid that user can join via the RSVP commands.
 
-        If a gym name is multiple words wrap the gym name with single quotes.
+        If a gym name is multiple words wrap the gym name with double quotes.
         """
 
         hatch_time = timezone.localtime(timezone.now()) + timedelta(minutes=minutes_remaining)
@@ -155,7 +155,7 @@ class Rsvp:
                           minutes_remaining: int):
         """Creates an raid that user can join via the RSVP commands.
 
-        If a gym name is multiple words wrap the gym name with single quotes.
+        If a gym name is multiple words wrap the gym name with double quotes.
         """
 
         expiration = timezone.localtime(timezone.now()) + timedelta(minutes=minutes_remaining)
