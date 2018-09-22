@@ -86,14 +86,6 @@ class RaidCoordinator(commands.AutoShardedBot):
                          pm_help=True, help_attrs=dict(hidden=True))
 
         self.session = aiohttp.ClientSession(loop=self.loop)
-        self.raids = RaidManager()
-        self.zones = RaidZoneManager()
-        self.bot_guild = None
-        self.rsvp_channel = None
-        self.bot_only_channels = []
-        self.reset_date = timezone.localdate(timezone.now()) + timedelta(hours=24)
-        self.private_channel_no_access = discord.PermissionOverwrite(read_messages=False)
-        self.private_channel_access = discord.PermissionOverwrite(read_messages=True, mention_everyone=True)
 
         config_results = GuildConfig.objects.filter(guild=guild_id)
         if len(config_results) == 0:
@@ -102,6 +94,15 @@ class RaidCoordinator(commands.AutoShardedBot):
             self.config: GuildConfig = gc
         else:
             self.config: GuildConfig = config_results[0]
+
+        self.raids = RaidManager(self.config.raid_duration, self.config.ex_duration)
+        self.zones = RaidZoneManager()
+        self.bot_guild = None
+        self.rsvp_channel = None
+        self.bot_only_channels = []
+        self.reset_date = timezone.localdate(timezone.now()) + timedelta(hours=24)
+        self.private_channel_no_access = discord.PermissionOverwrite(read_messages=False)
+        self.private_channel_access = discord.PermissionOverwrite(read_messages=True, mention_everyone=True)
 
         # create the background task and run it in the background
         self.bg_task = self.loop.create_task(self.background_cleanup())
