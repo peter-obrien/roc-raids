@@ -12,7 +12,7 @@ embed_color = 0x408fd0
 
 
 class RaidManager:
-    def __init__(self):
+    def __init__(self, raid_duration:45, ex_duration:45):
         self.logging_out = False
         self.hashed_active_raids = dict()
         self.raid_map = dict()
@@ -20,6 +20,9 @@ class RaidManager:
         last_raid_seed = Raid.objects.filter(active=True, is_exclusive=False).aggregate(Max('display_id')).get('display_id__max')
         if last_raid_seed is not None:
             self.raid_seed = last_raid_seed
+
+        self.raid_duration = raid_duration
+        self.ex_duration = ex_duration
 
         self.exclusive_hashed_raids = dict()
         self.exclusive_raid_map = dict()
@@ -97,7 +100,7 @@ class RaidManager:
         expiration_time = expiration
         if is_egg:
             hatch_time = expiration
-            expiration_time = hatch_time + timedelta(minutes=45)
+            expiration_time = hatch_time + timedelta(minutes=self.raid_duration)
 
         raid = Raid(gym_name=gym_name, is_egg=is_egg, raid_level=raid_level, pokemon_number=0,
                     pokemon_name=pokemon_name, latitude=latitude, longitude=longitude,
@@ -231,8 +234,7 @@ class RaidManager:
             desc = f"{raid.gym_name}\n\n**Moves:** {raid.data['quick_move']}/{raid.data['charge_move']}\n**Ends:** *{localtime(raid.expiration).strftime(time_format)}*"
         else:
             if raid.is_exclusive:
-                # Current trend is a duration of 45 minutes for an EX raid.
-                start_time = localtime(raid.expiration) - timedelta(minutes=45)
+                start_time = localtime(raid.expiration) - timedelta(minutes=self.ex_duration)
                 desc = f'{raid.gym_name}\n\n**Starts:** *{start_time.strftime(time_format)}*\n**Ends:** *{localtime(raid.expiration).strftime(time_format)}*'
             else:
                 desc = f'{raid.gym_name}\n\n**Ends:** *{localtime(raid.expiration).strftime(time_format)}*'
