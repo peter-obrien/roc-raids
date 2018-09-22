@@ -225,8 +225,8 @@ class RaidManager:
             result += '\n\t' + str(raider)
         return result
 
-    @staticmethod
-    async def build_raid_embed(raid):
+
+    async def build_raid_embed(self, raid):
         if 'quick_move' in raid.data:
             desc = f"{raid.gym_name}\n\n**Moves:** {raid.data['quick_move']}/{raid.data['charge_move']}\n**Ends:** *{localtime(raid.expiration).strftime(time_format)}*"
         else:
@@ -259,8 +259,7 @@ class RaidManager:
 
         return result
 
-    @staticmethod
-    async def build_egg_embed(raid):
+    async def build_egg_embed(self, raid):
         desc = f'{raid.gym_name}\n\n**Hatches:** *{localtime(raid.hatch_time).strftime(time_format)}*'
 
         result = discord.Embed(title=f'Level {raid.raid_level} egg: Raid #{raid.display_id}', url=raid.data['url'],
@@ -280,8 +279,7 @@ class RaidManager:
 
         return result
 
-    @staticmethod
-    def build_manual_raid_embed(raid):
+    def build_manual_raid_embed(self, raid):
         if raid.is_egg:
             desc = f'{raid.gym_name}\n\n**Hatches:** *{localtime(raid.hatch_time).strftime(time_format)}*\n**Approx End:** *{localtime(raid.expiration).strftime(time_format)}*'
         else:
