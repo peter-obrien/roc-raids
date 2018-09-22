@@ -210,6 +210,15 @@ class Admin:
 
         await ctx.send(f'Created EX raid #{raid.display_id}')
 
+    @commands.command()
+    @commands.guild_only()
+    @commands.has_permissions(manage_channels=True)
+    async def delete_raid(self, ctx, raid_id: str):
+        raid = ctx.raids.get_raid(raid_id)
+        await ctx.raids.delete_raid_from_discord(raid)
+        raid.delete()
+        await ctx.send(f'Deleted raid #{raid_id}')
+
 
 def setup(bot):
     bot.add_cog(Admin(bot))
