@@ -147,6 +147,30 @@ class Admin:
             raise commands.CommandInvokeError('User cannot run this command.')
 
     @commands.command(hidden=True)
+    @commands.guild_only()
+    async def set_raid_duration(self, ctx, duration: int):
+        """Sets the default duration of regular raids"""
+        if ctx.author == ctx.guild.owner:
+            ctx.bot.config.raid_duration = duration
+            ctx.bot.config.save()
+            ctx.raids.raid_duration = duration
+            await ctx.send(f'Configured raid duration changed to `{duration}`')
+        else:
+            raise commands.CommandInvokeError('User cannot run this command.')
+
+    @commands.command(hidden=True)
+    @commands.guild_only()
+    async def set_ex_duration(self, ctx, duration: int):
+        """Sets the default duration of ex raids"""
+        if ctx.author == ctx.guild.owner:
+            ctx.bot.config.ex_duration = duration
+            ctx.bot.config.save()
+            ctx.raids.ex_duration = duration
+            await ctx.send(f'Configured EX duration changed to `{duration}`')
+        else:
+            raise commands.CommandInvokeError('User cannot run this command.')
+
+    @commands.command(hidden=True)
     async def debug(self, ctx):
         """Prints out diagnostic information regarding this bot's configuration."""
         if ctx.author == ctx.guild.owner:
