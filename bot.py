@@ -254,22 +254,7 @@ class RaidCoordinator(commands.AutoShardedBot):
 
             # Process expired raids
             for raid in expired_raids:
-                for message in raid.messages:
-                    try:
-                        if not self.raids.logging_out:
-                            if message.id in self.raids.message_to_raid:
-                                del self.raids.message_to_raid[message.id]
-                            elif message.id in self.raids.private_channel_raids:
-                                del self.raids.private_channel_raids[message.id]
-                        await message.delete()
-                    except discord.errors.NotFound:
-                        pass
-                if raid.private_discord_channel is not None:
-                    try:
-                        await raid.private_discord_channel.delete()
-                    except discord.errors.NotFound:
-                        pass
-                self.raids.remove_raid(raid)
+                await self.raids.delete_raid_from_discord(raid)
 
             # Check to see if the raid manager needs to be reset
             if current_date == self.reset_date:

@@ -140,6 +140,24 @@ class RaidManager:
             self.hashed_active_raids.pop(hash(raid), None)
             self.raid_map.pop(raid.display_id, None)
 
+    async def delete_raid_from_discord(self, raid):
+        for message in raid.messages:
+            try:
+                if not self.logging_out:
+                    if message.id in self.message_to_raid:
+                        del self.message_to_raid[message.id]
+                    elif message.id in self.private_channel_raids:
+                        del self.private_channel_raids[message.id]
+                await message.delete()
+            except discord.errors.NotFound:
+                pass
+        if raid.private_discord_channel is not None:
+            try:
+                await raid.private_discord_channel.delete()
+            except discord.errors.NotFound:
+                pass
+        self.remove_raid(raid)
+
     def get_raid(self, raid_id_str):
         if raid_id_str.lower().startswith('ex'):
             ex_raid_id_str = raid_id_str[2:]
