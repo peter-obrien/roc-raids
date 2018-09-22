@@ -170,6 +170,8 @@ class GuildConfig(models.Model):
     time_zone = models.CharField(max_length=50, default='UTC')
     raid_category = models.BigIntegerField(null=True)
     ex_raid_channel = models.BigIntegerField(null=True)
+    ex_duration = models.IntegerField(default=45)
+    raid_duration = models.IntegerField(default=45)
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
