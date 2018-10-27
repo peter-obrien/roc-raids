@@ -210,6 +210,10 @@ class Admin:
 
         await ctx.send(f'Created EX raid #{raid.display_id}')
 
+    @create_exclusive_raid.after_invoke
+    async def after_create_exclusive_raid_command(self, ctx):
+        await ctx.message.delete()
+
     @commands.command()
     @commands.guild_only()
     @commands.has_permissions(manage_channels=True)
@@ -218,6 +222,10 @@ class Admin:
         await ctx.raids.delete_raid_from_discord(raid)
         raid.delete()
         await ctx.send(f'Deleted raid #{raid_id}')
+
+    @delete_raid.after_invoke
+    async def after_delete_raid_command(self, ctx):
+        await ctx.message.delete()
 
 
 def setup(bot):
