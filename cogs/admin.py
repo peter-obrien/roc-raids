@@ -201,6 +201,8 @@ class Admin:
 
         if ctx.bot.config.discord_ex_raid_channel is not None:
             msg = await ctx.bot.config.discord_ex_raid_channel.send(embed=raid.embed)
+            if not ctx.bot.raids.logging_out:
+                await msg.add_reaction('✅')
             rm = RaidMessage(raid=raid, channel=msg.channel.id, message=msg.id)
             rm.save()
             raid.messages.append(msg)
