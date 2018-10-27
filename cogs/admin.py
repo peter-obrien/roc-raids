@@ -38,9 +38,6 @@ class Admin:
         print('Logout command invoked. Shutting down.')
         # Remove all reactions from raid embed messages
         ctx.raids.logging_out = True
-        for raid in ctx.raids.raid_map.values():
-            for message in raid.messages:
-                await message.clear_reactions()
 
         await ctx.message.delete()
         await ctx.bot.logout()

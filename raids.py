@@ -27,8 +27,7 @@ class RaidManager:
         self.exclusive_hashed_raids = dict()
         self.exclusive_raid_map = dict()
         self.exclusive_raid_seed = 0
-        # These two dictionaries does not need to be repopulated since discord.py cannot monitor reactions on messages
-        # prior to the bot coming online.
+
         self.message_to_raid = dict()
         self.private_channel_raids = dict()
 
@@ -67,6 +66,9 @@ class RaidManager:
                     if channel is not None:
                         msg = await channel.get_message(rm.message)
                         raid.messages.append(msg)
+                        self.message_to_raid[msg.id] = raid
+                        if raid.private_discord_channel is not None and raid.private_discord_channel.id == channel.id:
+                            self.private_channel_raids[msg.id] = raid
                     else:
                         print(f'Could not find channel raid message {rm.id}')
                 except discord.errors.NotFound:
