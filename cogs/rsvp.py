@@ -182,5 +182,58 @@ class Rsvp:
 
             await ctx.send(f'Created raid #{raid.display_id}')
 
+    @commands.command(aliases=['hatch'])
+    @commands.has_role('Raid Reporter')
+    async def hatched(self, ctx, raid_id: str, pokemon_name: str):
+        """Reports what pokemon hatched from a raid egg. Existing cards for the raid will be deleted and new ones sent out.
+
+        If a pokemon name is multiple words wrap it with double quotes.
+        """
+        raid = ctx.raids.get_raid(raid_id)
+        if raid.is_exclusive:
+            await ctx.author.send(f"This operation cannot be performed on EX raids")
+        elif not raid.is_egg:
+            await ctx.author.send(f"This raid has already hatched.")
+        else:
+
+            raid.is_egg = False
+            raid.pokemon_name = pokemon_name
+            raid.save()
+
+            raid.embed = ctx.raids.build_manual_raid_embed(raid)
+
+            for m in raid.messages:
+                try:
+                    if not ctx.bot.raids.logging_out:
+                        if m.id in ctx.bot.raids.message_to_raid:
+                            del ctx.bot.raids.message_to_raid[m.id]
+                        elif m.id in ctx.bot.raids.private_channel_raids:
+                            del ctx.bot.raids.private_channel_raids[m.id]
+                    await m.delete()
+                except discord.NotFound:
+                    pass
+            raid.messages = []
+
+            if len(raid.participants) > 0:
+                ctx.bot.raids.update_embed_participants(raid)
+
+            # Send the new embed to the private channel
+            if raid.private_channel is not None:
+                private_raid_card = await raid.private_discord_channel.send(embed=raid.embed)
+                # Add reaction to allow for easy leaving the raid.
+                if not ctx.bot.raids.logging_out:
+                    await private_raid_card.add_reaction('❌')
+                    await private_raid_card.add_reaction('1⃣')
+                    await private_raid_card.add_reaction('2⃣')
+                    await private_raid_card.add_reaction('3⃣')
+                    await private_raid_card.add_reaction('4⃣')
+                    ctx.bot.raids.private_channel_raids[private_raid_card.id] = raid
+                raid.messages.append(private_raid_card)
+
+            objects_to_save = await ctx.zones.send_to_raid_zones(raid, ctx.bot)
+            RaidMessage.objects.bulk_create(objects_to_save)
+
+            await ctx.send(f'Hatched raid #{raid.display_id}')
+
 def setup(bot):
     bot.add_cog(Rsvp(bot))
