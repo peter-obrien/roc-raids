@@ -186,7 +186,7 @@ class Admin:
 
     @commands.command(name='create_ex')
     @commands.guild_only()
-    @commands.has_permissions(manage_channels=True)
+    @commands.has_role('Raid Reporter')
     async def create_exclusive_raid(self, ctx, gym_name: str, latitude: Decimal, longitude: Decimal,
                                     expiration: UserRaidEndTimeAndDate):
         """Creates an EX raid that user can join via the RSVP commands.
