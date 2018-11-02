@@ -215,7 +215,7 @@ class Admin:
 
     @commands.command()
     @commands.guild_only()
-    @commands.has_permissions(manage_channels=True)
+    @commands.has_role('Raid Reporter')
     async def delete_raid(self, ctx, raid_id: str):
         raid = ctx.raids.get_raid(raid_id)
         await ctx.raids.delete_raid_from_discord(raid)
