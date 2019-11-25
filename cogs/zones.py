@@ -7,7 +7,7 @@ from cogs.utils.converters import ChannelOrMember
 from orm.models import RaidZone
 
 
-class Zones:
+class Zones(commands.Cog):
     """Raid zone setup and configuration. To invoke user must have Manage Channels permission."""
 
     def __init__(self, bot):

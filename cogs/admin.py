@@ -8,7 +8,7 @@ from cogs.utils.converters import UserRaidEndTimeAndDate
 from orm.models import BotOnlyChannel, RaidMessage
 
 
-class Admin:
+class Admin(commands.Cog):
     """Commands for the owner, admins, and mods."""
 
     def __init__(self, bot):

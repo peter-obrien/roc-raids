@@ -9,7 +9,7 @@ from django.utils import timezone
 from orm.models import RaidMessage
 
 
-class Rsvp:
+class Rsvp(commands.Cog):
     """Reservation system"""
 
     def __init__(self, bot):
