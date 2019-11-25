@@ -64,7 +64,7 @@ class RaidManager:
                 try:
                     channel = bot.get_channel(rm.channel)
                     if channel is not None:
-                        msg = await channel.get_message(rm.message)
+                        msg = await channel.fetch_message(rm.message)
                         raid.messages.append(msg)
                         self.message_to_raid[msg.id] = raid
                         if raid.private_discord_channel is not None and raid.private_discord_channel.id == channel.id:

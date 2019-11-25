@@ -177,7 +177,7 @@ class RaidCoordinator(commands.AutoShardedBot):
         # Used for testing purposes
         if message.content.startswith(command_char + 'go') and test_message_id is not None:
             await message.delete()
-            message = await message.channel.get_message(test_message_id)
+            message = await message.channel.fetch_message(test_message_id)
 
         if message.channel.id == raid_src_id and message.author.bot:
             await alarm_handler.process_raid(self, message)
@@ -198,7 +198,7 @@ class RaidCoordinator(commands.AutoShardedBot):
 
         channel = self.get_channel(payload.channel_id)
         message_id = payload.message_id
-        message = await channel.get_message(message_id)
+        message = await channel.fetch_message(message_id)
         emoji = str(payload.emoji)
 
 
