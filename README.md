@@ -1,12 +1,12 @@
 ## Setup
-This bot uses the [discord.py](https://github.com/Rapptz/discord.py/tree/rewrite) rewrite as such requires a version of Python that is compatible with the library.
+This bot uses the [discord.py](https://github.com/Rapptz/discord.py/) library as such requires a version of Python that is compatible with the library.
 
-`python3 -m pip install -U git+https://github.com/Rapptz/discord.py@rewrite#egg=discord.py[voice]`
+`pip install -U discord.py`
 
 Other libraries used are:
 ```
 pip install -U pytz
-pip install -U Django
+pip install -U Django==2.2
 pip install -U psycopg2
 ```
 The bot also requires a [PostgreSQL](https://www.postgresql.org/) database.
