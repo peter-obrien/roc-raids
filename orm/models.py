@@ -19,6 +19,7 @@ class Raid(models.Model):
     is_egg = models.BooleanField(default=False)
     hatch_time = models.DateTimeField(null=True)
     is_exclusive = models.BooleanField(default=False)
+    is_mega = models.BooleanField(default=False)
     reporting_user = models.BigIntegerField(null=True)
 
     def __init__(self, *args, **kwargs):

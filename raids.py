@@ -93,13 +93,15 @@ class RaidManager:
         return raid
 
     async def create_manual_raid(self, user_id, is_egg, gym_name, expiration, latitude, longitude, raid_level=0,
-                                 pokemon_name=None,):
+                                 pokemon_name=None, is_mega=False):
 
         data = dict()
         data['url'] = f'http://maps.google.com/maps?q={latitude},{longitude}'
 
         hatch_time = None
         expiration_time = expiration
+        is_mega = str(raid_level).lower() == 'mega'
+        raid_level = 0 if is_mega else int(raid_level)
         if is_egg:
             hatch_time = expiration
             expiration_time = hatch_time + timedelta(minutes=self.raid_duration)
@@ -107,7 +109,7 @@ class RaidManager:
         raid = Raid(gym_name=gym_name, is_egg=is_egg, raid_level=raid_level, pokemon_number=0,
                     pokemon_name=pokemon_name, latitude=latitude, longitude=longitude,
                     hatch_time=hatch_time, expiration=expiration_time,
-                    is_exclusive=False, data=data, reporting_user=user_id)
+                    is_exclusive=False, data=data, reporting_user=user_id, is_mega=is_mega)
 
         return raid
 
@@ -211,6 +213,11 @@ class RaidManager:
 
         if raid.is_exclusive:
             pokemon_or_raid_level = 'EX'
+        elif raid.is_mega:
+            if raid.pokemon_name is not None:
+                pokemon_or_raid_level = f'**MEGA** {raid.pokemon_name}'
+            else:
+                pokemon_or_raid_level = '**MEGA**'
         elif raid.pokemon_name is None:
             pokemon_or_raid_level = f'a Level {raid.raid_level}'
         else:
@@ -261,6 +268,8 @@ class RaidManager:
 
         if raid.is_exclusive:
             title = f'EX Raid #{raid.display_id}'
+        elif raid.is_mega:
+            title = f'{raid.pokemon_name}: Mega Raid #{raid.display_id}'
         else:
             title = f'{raid.pokemon_name}: Raid #{raid.display_id}'
 
@@ -284,7 +293,12 @@ class RaidManager:
     async def build_egg_embed(self, raid):
         desc = f'{raid.gym_name}\n\n**Hatches:** *{localtime(raid.hatch_time).strftime(time_format)}*'
 
-        result = discord.Embed(title=f'Level {raid.raid_level} egg: Raid #{raid.display_id}', url=raid.data['url'],
+        if raid.is_mega:
+            title = f'Mega egg: Raid #{raid.display_id}'
+        else:
+            title = f'Level {raid.raid_level} egg: Raid #{raid.display_id}'
+
+        result = discord.Embed(title=title, url=raid.data['url'],
                                description=desc, colour=embed_color)
 
         if 'image' in raid.data:
@@ -308,10 +322,16 @@ class RaidManager:
             desc = f'{raid.gym_name}\n\n**Ends:** *{localtime(raid.expiration).strftime(time_format)}*'
 
         details = ''
-        if raid.pokemon_name is not None:
-            details = f'{raid.pokemon_name}: '
-        elif raid.raid_level > 0:
-            details = f'Level {raid.raid_level}: '
+        if raid.is_mega:
+            if raid.is_egg:
+                details = 'Mega Egg: '
+            elif raid.pokemon_name is not None:
+                    details = f'Mega {raid.pokemon_name}: '
+        else:
+            if raid.pokemon_name is not None:
+                details = f'{raid.pokemon_name}: '
+            elif raid.raid_level > 0:
+                details = f'Level {raid.raid_level}: '
 
         result = discord.Embed(title=f'{details}User Raid #{raid.display_id}', url=raid.data['url'],
                                description=desc, colour=embed_color)

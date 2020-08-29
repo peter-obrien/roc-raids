@@ -132,7 +132,7 @@ class Rsvp(commands.Cog):
 
     @commands.command(aliases=['reportegg'])
     @commands.has_role('Raid Reporter')
-    async def report_egg(self, ctx, gym_name: str, level: int, latitude: Decimal, longitude: Decimal,
+    async def report_egg(self, ctx, gym_name: str, level: str, latitude: Decimal, longitude: Decimal,
                          minutes_remaining: int):
         """Creates an raid that user can join via the RSVP commands.
 
@@ -150,7 +150,7 @@ class Rsvp(commands.Cog):
 
     @commands.command(aliases=['reportraid'])
     @commands.has_role('Raid Reporter')
-    async def report_raid(self, ctx, gym_name: str, level: int, pokemon_name: str, latitude: Decimal,
+    async def report_raid(self, ctx, gym_name: str, level: str, pokemon_name: str, latitude: Decimal,
                           longitude: Decimal,
                           minutes_remaining: int):
         """Creates an raid that user can join via the RSVP commands.
